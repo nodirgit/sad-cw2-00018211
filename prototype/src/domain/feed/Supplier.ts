@@ -1,4 +1,5 @@
 import { Partner } from '../partners/Partner';
+import { PartnerDetails } from '../partners/PartnerDetails';
 
 export enum SupplierType {
   CHICKS = 'CHICKS',
@@ -16,8 +17,8 @@ export const SUPPLIER_TYPE_LABEL: Record<SupplierType, string> = {
 export class Supplier extends Partner {
   private readonly type: SupplierType;
 
-  constructor(id: string, name: string, type: SupplierType, active = true) {
-    super(id, name, active);
+  constructor(id: string, name: string, type: SupplierType, active = true, details: PartnerDetails = PartnerDetails.empty()) {
+    super(id, name, active, details);
     this.type = type;
   }
 

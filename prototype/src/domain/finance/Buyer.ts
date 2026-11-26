@@ -1,4 +1,5 @@
 import { Partner } from '../partners/Partner';
+import { PartnerDetails } from '../partners/PartnerDetails';
 
 /** The groups of partners the farm sells meat to (Farm Facts: none of them are employees). */
 export enum BuyerGroup {
@@ -23,8 +24,8 @@ export const BUYER_GROUP_LABEL: Record<BuyerGroup, string> = {
 export class Buyer extends Partner {
   private readonly group: BuyerGroup;
 
-  constructor(id: string, name: string, group: BuyerGroup, active = true) {
-    super(id, name, active);
+  constructor(id: string, name: string, group: BuyerGroup, active = true, details: PartnerDetails = PartnerDetails.empty()) {
+    super(id, name, active, details);
     this.group = group;
   }
 

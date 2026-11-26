@@ -14,7 +14,8 @@ import { LogDeathScreen } from './screens/LogDeathScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SalesScreen } from './screens/SalesScreen';
-import { DemoDataScreen, ExpenseCategoriesScreen, HouseNewScreen, HouseSettingsScreen, HousesScreen, PartnersScreen } from './screens/SettingsScreen';
+import { PartnerNewScreen, PartnerScreen, PartnersScreen } from './screens/PartnersScreen';
+import { DemoDataScreen, ExpenseCategoriesScreen, HouseNewScreen, HouseSettingsScreen, HousesScreen } from './screens/SettingsScreen';
 import { SlaughterScreen } from './screens/SlaughterScreen';
 import { WorkerHome } from './screens/WorkerHome';
 
@@ -108,6 +109,10 @@ function screenFor(s: AppState) {
       return director ? <HouseNewScreen /> : <DirectorOnly />;
     case 'settings-partners':
       return director ? <PartnersScreen /> : <DirectorOnly />;
+    case 'settings-partner':
+      return director ? <PartnerScreen key={r.partnerId} partnerId={r.partnerId} /> : <DirectorOnly />;
+    case 'settings-partner-new':
+      return director ? <PartnerNewScreen /> : <DirectorOnly />;
     case 'settings-categories':
       return director ? <ExpenseCategoriesScreen /> : <DirectorOnly />;
     case 'settings-demo':

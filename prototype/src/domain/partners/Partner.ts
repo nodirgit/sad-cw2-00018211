@@ -1,4 +1,5 @@
 import { DomainError } from '../DomainError';
+import { PartnerDetails } from './PartnerDetails';
 
 /**
  * A firm or person the farm trades with: one we sell to (Buyer) or buy from (Supplier).
@@ -9,11 +10,24 @@ export abstract class Partner {
   protected readonly id: string;
   protected name: string;
   protected active: boolean;
+  protected details: PartnerDetails;
 
-  constructor(id: string, name: string, active = true) {
+  constructor(id: string, name: string, active = true, details: PartnerDetails = PartnerDetails.empty()) {
     this.id = id;
     this.name = Partner.clean(name);
     this.active = active;
+    this.details = details;
+  }
+
+  /** TIN and contact details (composition: a value object owned by the partner). */
+  getDetails(): PartnerDetails {
+    return this.details;
+  }
+
+  /** Correct the name and the details together. */
+  update(name: string, details: PartnerDetails): void {
+    this.name = Partner.clean(name);
+    this.details = details;
   }
 
   getId(): string {
@@ -27,10 +41,6 @@ export abstract class Partner {
   /** false once removed from the lists; kept so the history stays readable. */
   isActive(): boolean {
     return this.active;
-  }
-
-  rename(name: string): void {
-    this.name = Partner.clean(name);
   }
 
   archive(): void {

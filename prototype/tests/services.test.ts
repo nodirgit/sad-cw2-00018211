@@ -9,6 +9,7 @@ import { LightingService } from '../src/application/services/LightingService';
 import { MonitoringService } from '../src/application/services/MonitoringService';
 import { MortalityService } from '../src/application/services/MortalityService';
 import { PartnerService } from '../src/application/services/PartnerService';
+import { PartnerDetails } from '../src/domain/partners/PartnerDetails';
 import { ExpenseCategoryService } from '../src/application/services/ExpenseCategoryService';
 import { VoiceEntryService } from '../src/application/services/VoiceEntryService';
 import { RuleBasedVoiceParser } from '../src/infrastructure/voice/RuleBasedVoiceParser';
@@ -222,7 +223,7 @@ describe('NFR-05 suppliers by configuration', () => {
     expect(() => suppliers.addSupplier('demo feed factory a', SupplierType.FEED, director)).toThrow('already a partner');
     expect(() => suppliers.addSupplier('X', SupplierType.FEED, worker1)).toThrow('Only the Director');
 
-    suppliers.renamePartner(c.getId(), 'Demo Feed Factory C (Navoi)', director);
+    suppliers.updatePartner(c.getId(), 'Demo Feed Factory C (Navoi)', c.getDetails(), director);
     const { delivery } = s.feed.recordDelivery('house-1', c.getId(), 1000, null, worker1);
     suppliers.removePartner(c.getId(), director);
 
@@ -266,6 +267,20 @@ describe('NFR-05 partners (who we sell to and buy from)', () => {
     expect(partners.findBuyer(stall.getId())?.getName()).toBe('Navoi stall 4');
     const byBuyer = s.profit.profitFor('batch-h2', director).salesByBuyer;
     expect(byBuyer.find((b) => b.buyerId === stall.getId())?.group).toBe('Resellers');
+  });
+
+  it('keeps a TIN and contact details; the TIN is 9 digits and not used twice', () => {
+    const s = setup();
+    const partners = new PartnerService(s.repos.buyers, s.repos.suppliers, new AccessPolicy());
+    const details = new PartnerDetails('305 123 456', 'Demo contact', '+998 90 000 00 00', 'Navoi');
+    const firm = partners.addSupplier('Demo Feed Factory C', SupplierType.FEED, director, details);
+    expect(firm.getDetails().tin).toBe('305123456');
+    expect(() => new PartnerDetails('12345')).toThrow('9 digits');
+    expect(() => new PartnerDetails('', '', 'call me')).toThrow('phone');
+    expect(() => partners.addBuyer('Other firm', BuyerGroup.CLIENT, director, new PartnerDetails('305123456'))).toThrow('already belongs');
+    partners.updatePartner(firm.getId(), 'Demo Feed Factory C', new PartnerDetails('305123456', 'New contact'), director);
+    expect(partners.findPartner(firm.getId())?.getDetails().contactPerson).toBe('New contact');
+    expect(partners.findPartner(firm.getId())?.getDetails().phone).toBe('');
   });
 
   it('only a Bazaar agent needs the cross-check (FR-05), and old sales without a partner still load', () => {

@@ -2,6 +2,7 @@ import { DomainError } from '../../domain/DomainError';
 import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
 import { Partner } from '../../domain/partners/Partner';
+import { PartnerDetails } from '../../domain/partners/PartnerDetails';
 import { User } from '../../domain/people/User';
 import { newId } from '../ids';
 import { Repository } from '../ports/Repository';
@@ -39,9 +40,14 @@ export class PartnerService {
       .sort(byName);
   }
 
-  /** Every active partner, buyers and suppliers. */
+  /** Every active partner, buyers and suppliers, A–Z. */
   activePartners(): Partner[] {
-    return [...this.activeBuyers(), ...this.activeSuppliers()];
+    return [...this.activeBuyers(), ...this.activeSuppliers()].sort(byName);
+  }
+
+  /** Any partner, archived ones included. */
+  findPartner(partnerId: string): Partner | undefined {
+    return this.buyers.findById(partnerId) ?? this.suppliers.findById(partnerId);
   }
 
   /** Any buyer, archived ones included (a past sale may name it). */
@@ -49,27 +55,31 @@ export class PartnerService {
     return this.buyers.findById(buyerId);
   }
 
-  addBuyer(name: string, group: BuyerGroup, user: User): Buyer {
+  addBuyer(name: string, group: BuyerGroup, user: User, details: PartnerDetails = PartnerDetails.empty()): Buyer {
     this.policy.requireDirector(user);
     this.checkNameFree(name);
-    const buyer = new Buyer(newId('buyer'), name, group);
+    this.checkTinFree(details);
+    const buyer = new Buyer(newId('buyer'), name, group, true, details);
     this.buyers.save(buyer);
     return buyer;
   }
 
-  addSupplier(name: string, type: SupplierType, user: User): Supplier {
+  addSupplier(name: string, type: SupplierType, user: User, details: PartnerDetails = PartnerDetails.empty()): Supplier {
     this.policy.requireDirector(user);
     this.checkNameFree(name);
-    const supplier = new Supplier(newId('sup'), name, type);
+    this.checkTinFree(details);
+    const supplier = new Supplier(newId('sup'), name, type, true, details);
     this.suppliers.save(supplier);
     return supplier;
   }
 
-  renamePartner(partnerId: string, name: string, user: User): Partner {
+  /** Correct a partner's name, TIN and contact details. Its group stays (past sales depend on it). */
+  updatePartner(partnerId: string, name: string, details: PartnerDetails, user: User): Partner {
     this.policy.requireDirector(user);
     const partner = this.require(partnerId);
     this.checkNameFree(name, partnerId);
-    partner.rename(name);
+    this.checkTinFree(details, partnerId);
+    partner.update(name, details);
     this.store(partner);
     return partner;
   }
@@ -91,6 +101,13 @@ export class PartnerService {
   private store(partner: Partner): void {
     if (partner instanceof Buyer) this.buyers.save(partner);
     else if (partner instanceof Supplier) this.suppliers.save(partner);
+  }
+
+  /** Two partners with the same TIN are the same firm entered twice. */
+  private checkTinFree(details: PartnerDetails, exceptId?: string): void {
+    if (!details.tin) return;
+    const clash = this.activePartners().find((p) => p.getId() !== exceptId && p.getDetails().tin === details.tin);
+    if (clash) throw new DomainError(`TIN ${details.tin} already belongs to ${clash.getName()}.`);
   }
 
   private checkNameFree(name: string, exceptId?: string): void {

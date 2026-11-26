@@ -18,6 +18,8 @@ export type Route =
   | { name: 'settings-house'; houseId: string }
   | { name: 'settings-house-new' }
   | { name: 'settings-partners' }
+  | { name: 'settings-partner'; partnerId: string }
+  | { name: 'settings-partner-new' }
   | { name: 'settings-categories' }
   | { name: 'settings-demo' };
 

@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 35 unit tests of the business rules (Vitest) |
+| `npm test` | 36 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -49,7 +49,7 @@ After login a **bottom bar** holds the main sections, like a phone app: **Main**
 | Sales | FR-03, FR-05 | *Direct sale* and *Bazaar Agent sale* (opens the cross-check), then the latest sales of all buyers with the total |
 | Direct sale | FR-03 | sales to resellers (e.g. the Nurata seller), the shop and clients: the buyer is picked by name from the partners, grouped, or added on the spot with *＋ New partner*; kg, price per kg (prefilled from that buyer's last sale, else the case's price for the group), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
 | Expenses | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses (last 7 days at first; 30 days, all or chosen dates) with count and total, each can be edited or deleted |
-| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Partners** (everyone we trade with, in groups — we sell to: Bazaar agents, Resellers, Shop, Clients; we buy from: Feed suppliers, Chick suppliers — add, rename, delete), **Expense categories** (the six built-in ones are fixed; add, rename and delete your own, which appear as extra buttons on the Expenses form and in Batch profit), **Demo data** (what is invented, reset) |
+| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Partners** (one A–Z list of everyone we trade with, each tagged with its group — we sell to: Bazaar agents, Resellers, Shop, Clients; we buy from: Feed suppliers, Chick suppliers; **＋ Add a partner** with name, group, TIN, contact person, phone, address; tap a partner to edit its details or delete it), **Expense categories** (the six built-in ones are fixed; add, rename and delete your own, which appear as extra buttons on the Expenses form and in Batch profit), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 
 Screenshots of every screen are in [`screenshots/`](screenshots).
@@ -68,7 +68,7 @@ Every record a person enters can be corrected or deleted, unless another record 
 | Slaughter session | head count by *correction with a note* | only while empty | a counted session is the crew's pay record (NFR-04) |
 | House | name, capacity | when no open batch | capacity never below the chicks placed; at least one house |
 | Batch | chicks placed, start date; close / reopen | — | its records hang on it |
-| Partner (buyer or supplier) | name | yes (archived) | past sales and deliveries keep the name |
+| Partner (buyer or supplier) | name, TIN, contact person, phone, address | yes (archived) | the group stays (past sales depend on it); TIN 9 digits and not used twice; past sales and deliveries keep the name |
 | Expense category (your own) | name | yes (archived) | past expenses keep the name; the six built-in categories are fixed (feed deliveries, crew pay and the voice helper use them) |
 
 ## What is simulated or demo
@@ -97,7 +97,7 @@ src/
   domain/            entities, value objects, enums, abstract classes — no React, no storage
     people/          User (abstract), Director, Worker
     farm/            Farm ◆ House ◆ Batch, BatchStatus, MortalityRecord
-    partners/        Partner (abstract) ← Buyer, Supplier
+    partners/        Partner (abstract) ← Buyer, Supplier; PartnerDetails (TIN, contacts)
     feed/            Supplier, SupplierType, FeedDelivery
     finance/         FinancialEntry (abstract), Expense, Sale, ExpenseCategory, CustomCategory, Buyer, BuyerGroup
     slaughter/       SlaughterSession ◆ HeadCountRecord ◆ HeadCountCorrection, WeightTally, SessionKind, CrossCheckStatus

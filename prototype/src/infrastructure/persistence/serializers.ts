@@ -10,6 +10,8 @@ import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
 import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
 import { CustomCategory } from '../../domain/finance/CustomCategory';
+import { Partner } from '../../domain/partners/Partner';
+import { PartnerDetails } from '../../domain/partners/PartnerDetails';
 import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
@@ -53,9 +55,23 @@ export const farmSerializer: Serializer<Farm> = {
     ),
 };
 
+/** TIN and contact details of a partner, as stored. */
+const detailsRecord = (p: Partner) => {
+  const d = p.getDetails();
+  return { tin: d.tin, contactPerson: d.contactPerson, phone: d.phone, address: d.address };
+};
+// Read back without re-checking, so a record saved under older rules still loads.
+const detailsFrom = (r: any): PartnerDetails => {
+  try {
+    return new PartnerDetails(r.tin ?? '', r.contactPerson ?? '', r.phone ?? '', r.address ?? '');
+  } catch {
+    return PartnerDetails.empty();
+  }
+};
+
 export const supplierSerializer: Serializer<Supplier> = {
-  toRecord: (s) => ({ id: s.getId(), name: s.getName(), type: s.getType(), active: s.isActive() }),
-  fromRecord: (r) => new Supplier(r.id, r.name, r.type as SupplierType, r.active !== false),
+  toRecord: (s) => ({ id: s.getId(), name: s.getName(), type: s.getType(), active: s.isActive(), ...detailsRecord(s) }),
+  fromRecord: (r) => new Supplier(r.id, r.name, r.type as SupplierType, r.active !== false, detailsFrom(r)),
 };
 
 export const categorySerializer: Serializer<CustomCategory> = {
@@ -101,8 +117,8 @@ export function feedSerializer(suppliers: Repository<Supplier>): Serializer<Feed
 }
 
 export const buyerSerializer: Serializer<Buyer> = {
-  toRecord: (b) => ({ id: b.getId(), name: b.getName(), group: b.getGroup(), active: b.isActive() }),
-  fromRecord: (r) => new Buyer(r.id, r.name, r.group as BuyerGroup, r.active !== false),
+  toRecord: (b) => ({ id: b.getId(), name: b.getName(), group: b.getGroup(), active: b.isActive(), ...detailsRecord(b) }),
+  fromRecord: (r) => new Buyer(r.id, r.name, r.group as BuyerGroup, r.active !== false, detailsFrom(r)),
 };
 
 /** Sales saved before partners existed named a buyer type instead of a group. */

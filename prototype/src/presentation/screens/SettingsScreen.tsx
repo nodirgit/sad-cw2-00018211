@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { ThresholdRange } from '../../domain/environment/ThresholdRange';
 import type { House } from '../../domain/farm/House';
-import type { Partner } from '../../domain/partners/Partner';
-import { BUY_GROUPS, GroupOption, SELL_GROUPS } from '../components/PartnerPicker';
 import type { CustomCategory } from '../../domain/finance/CustomCategory';
 import { EXPENSE_CATEGORY_LABEL, ExpenseCategory } from '../../domain/finance/Expense';
 import { useUser } from '../AppContext';
@@ -330,114 +328,6 @@ function DeleteHouse({ house }: { house: House }) {
         Delete house
       </button>
       {blocked && <p className="tiny muted" style={{ margin: '6px 2px 0' }}>{blocked}</p>}
-      <ErrorNotice error={error} />
-    </div>
-  );
-}
-
-/* ---------------- Partners (NFR-05): who we sell to and buy from ---------------- */
-
-export function PartnersScreen() {
-  const { c, user, refresh } = useUser();
-  const [name, setName] = useState('');
-  const [group, setGroup] = useState(SELL_GROUPS[1].key);
-  const [msg, setMsg] = useState<string | null>(null);
-  const { error, run } = useAction();
-  const all = c.partners.activePartners();
-
-  function add() {
-    const opt = [...SELL_GROUPS, ...BUY_GROUPS].find((o) => o.key === group)!;
-    const p = run(() => opt.add(c, name, user));
-    if (p) {
-      setMsg(`${p.getName()} added to ${p.groupLabel()}.`);
-      setName('');
-      refresh();
-    }
-  }
-
-  const section = (title: string, groups: GroupOption[]) => (
-    <>
-      <div className="section-title">{title}</div>
-      {groups.map((g) => {
-        const list = all.filter((p) => p.groupLabel() === g.label);
-        return (
-          <div key={g.key} className="card">
-            <h3 style={{ marginTop: 0 }}>{g.label}</h3>
-            {list.length === 0 && <p className="small muted" style={{ margin: 0 }}>None.</p>}
-            {list.map((p) => (
-              <PartnerRow key={p.getId()} partner={p} />
-            ))}
-          </div>
-        );
-      })}
-    </>
-  );
-
-  return (
-    <Screen title="Partners" subtitle="Settings · who we trade with">
-      {section('We sell to', SELL_GROUPS)}
-      {section('We buy from', BUY_GROUPS)}
-
-      <div className="section-title">Add a partner</div>
-      <div className="card">
-        <input className="input" style={{ fontSize: 17 }} placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Partner name" />
-        <div className="seg" role="radiogroup" aria-label="Group" style={{ marginTop: 8, gridTemplateColumns: 'repeat(3, 1fr)', gridAutoFlow: 'row' }}>
-          {[...SELL_GROUPS, ...BUY_GROUPS].map((o) => (
-            <button key={o.key} className={group === o.key ? 'on' : ''} onClick={() => setGroup(o.key)} role="radio" aria-checked={group === o.key}>
-              {o.label}
-            </button>
-          ))}
-        </div>
-        <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={add} disabled={!name.trim()}>
-          Add partner
-        </button>
-        <ErrorNotice error={error} />
-        {msg && !error && <div style={{ marginTop: 10 }}><Notice kind="ok">{msg}</Notice></div>}
-      </div>
-      <p className="tiny muted">
-        Partners can also be added on the spot while recording a sale or a feed delivery. A deleted partner leaves every list; past sales and
-        deliveries still show its name.
-      </p>
-    </Screen>
-  );
-}
-
-function PartnerRow({ partner }: { partner: Partner }) {
-  const { c, user, refresh } = useUser();
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(partner.getName());
-  const { error, setError, run } = useAction();
-
-  function save() {
-    if (run(() => c.partners.renamePartner(partner.getId(), name, user))) {
-      setEditing(false);
-      refresh();
-    }
-  }
-
-  function remove() {
-    if (run(() => (c.partners.removePartner(partner.getId(), user), true))) refresh();
-  }
-
-  return (
-    <div className="rec">
-      {editing ? (
-        <>
-          <input className="input" style={{ fontSize: 17 }} value={name} onChange={(e) => setName(e.target.value)} aria-label="Partner name" />
-          <EditButtons onCancel={() => { setEditing(false); setName(partner.getName()); setError(null); }} onSave={save} saveDisabled={!name.trim()} />
-        </>
-      ) : (
-        <div className="top">
-          <div className="main">
-            <b>{partner.getName()}</b>
-          </div>
-          <RowActions
-            onEdit={() => { setName(partner.getName()); setEditing(true); }}
-            onDelete={remove}
-            confirmText={`Remove ${partner.getName()} from the partners? Past sales and deliveries keep its name.`}
-          />
-        </div>
-      )}
       <ErrorNotice error={error} />
     </div>
   );

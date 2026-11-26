@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BUYER_GROUP_LABEL, Buyer, BuyerGroup } from '../../domain/finance/Buyer';
 import { SupplierType } from '../../domain/feed/Supplier';
 import type { Partner } from '../../domain/partners/Partner';
+import type { PartnerDetails } from '../../domain/partners/PartnerDetails';
 import type { User } from '../../domain/people/User';
 import type { Container } from '../../app/container';
 import { useUser } from '../AppContext';
@@ -12,11 +13,11 @@ import { useAction } from '../useAction';
 export interface GroupOption {
   key: string;
   label: string;
-  add: (c: Container, name: string, user: User) => Partner;
+  add: (c: Container, name: string, user: User, details?: PartnerDetails) => Partner;
 }
 
-const buyerGroup = (g: BuyerGroup): GroupOption => ({ key: g, label: BUYER_GROUP_LABEL[g], add: (c, n, u) => c.partners.addBuyer(n, g, u) });
-const supplierGroup = (t: SupplierType, label: string): GroupOption => ({ key: t, label, add: (c, n, u) => c.partners.addSupplier(n, t, u) });
+const buyerGroup = (g: BuyerGroup): GroupOption => ({ key: g, label: BUYER_GROUP_LABEL[g], add: (c, n, u, d) => c.partners.addBuyer(n, g, u, d) });
+const supplierGroup = (t: SupplierType, label: string): GroupOption => ({ key: t, label, add: (c, n, u, d) => c.partners.addSupplier(n, t, u, d) });
 
 /** Partners we sell to. */
 export const SELL_GROUPS: GroupOption[] = [BuyerGroup.BAZAAR_AGENT, BuyerGroup.RESELLER, BuyerGroup.SHOP, BuyerGroup.CLIENT].map(buyerGroup);
