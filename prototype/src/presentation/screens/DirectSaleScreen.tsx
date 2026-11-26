@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Buyer } from '../../domain/finance/Buyer';
+import type { Buyer } from '../../domain/partners/Buyer';
 import type { Sale } from '../../domain/finance/Sale';
 import { useUser } from '../AppContext';
 import { HousePicker, useDefaultHouse } from '../components/HousePicker';

@@ -14,11 +14,11 @@ import { ExpenseCategoryService } from '../src/application/services/ExpenseCateg
 import { VoiceEntryService } from '../src/application/services/VoiceEntryService';
 import { RuleBasedVoiceParser } from '../src/infrastructure/voice/RuleBasedVoiceParser';
 import { financeSerializer } from '../src/infrastructure/persistence/serializers';
-import { SupplierType } from '../src/domain/feed/Supplier';
+import { SupplierType } from '../src/domain/partners/Supplier';
 import { SlaughterService } from '../src/application/services/SlaughterService';
 import { DatePeriod } from '../src/domain/DatePeriod';
 import { DomainError } from '../src/domain/DomainError';
-import { Buyer, BuyerGroup } from '../src/domain/finance/Buyer';
+import { Buyer, BuyerGroup } from '../src/domain/partners/Buyer';
 import { Expense, ExpenseCategory } from '../src/domain/finance/Expense';
 import { SessionKind } from '../src/domain/slaughter/SlaughterSession';
 import { CrossCheckStatus } from '../src/domain/slaughter/WeightTally';

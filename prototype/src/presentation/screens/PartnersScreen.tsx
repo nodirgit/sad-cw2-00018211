@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Buyer } from '../../domain/finance/Buyer';
+import { Buyer } from '../../domain/partners/Buyer';
 import type { Partner } from '../../domain/partners/Partner';
 import { PartnerDetails } from '../../domain/partners/PartnerDetails';
 import { useUser } from '../AppContext';

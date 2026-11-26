@@ -1,5 +1,5 @@
 import { DomainError } from '../../domain/DomainError';
-import { Buyer } from '../../domain/finance/Buyer';
+import { Buyer } from '../../domain/partners/Buyer';
 import { Sale } from '../../domain/finance/Sale';
 import { User } from '../../domain/people/User';
 import { SlaughterSession } from '../../domain/slaughter/SlaughterSession';

@@ -1,7 +1,7 @@
 import { DomainError } from '../../domain/DomainError';
 import { Batch } from '../../domain/farm/Batch';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
-import { Supplier, SupplierType } from '../../domain/feed/Supplier';
+import { Supplier, SupplierType } from '../../domain/partners/Supplier';
 import { ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { User } from '../../domain/people/User';
 import { newId } from '../ids';

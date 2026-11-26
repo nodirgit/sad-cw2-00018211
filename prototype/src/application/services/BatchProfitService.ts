@@ -1,6 +1,6 @@
 import { DatePeriod } from '../../domain/DatePeriod';
 import { DomainError } from '../../domain/DomainError';
-import { Buyer } from '../../domain/finance/Buyer';
+import { Buyer } from '../../domain/partners/Buyer';
 import { CustomCategory } from '../../domain/finance/CustomCategory';
 import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';

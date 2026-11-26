@@ -1,6 +1,6 @@
 import { DomainError } from '../../domain/DomainError';
-import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
-import { Supplier, SupplierType } from '../../domain/feed/Supplier';
+import { Buyer, BuyerGroup } from '../../domain/partners/Buyer';
+import { Supplier, SupplierType } from '../../domain/partners/Supplier';
 import { Partner } from '../../domain/partners/Partner';
 import { PartnerDetails } from '../../domain/partners/PartnerDetails';
 import { User } from '../../domain/people/User';

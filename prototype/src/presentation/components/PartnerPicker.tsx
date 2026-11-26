@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { BUYER_GROUP_LABEL, Buyer, BuyerGroup } from '../../domain/finance/Buyer';
-import { SupplierType } from '../../domain/feed/Supplier';
+import { BUYER_GROUP_LABEL, Buyer, BuyerGroup } from '../../domain/partners/Buyer';
+import { SupplierType } from '../../domain/partners/Supplier';
 import type { Partner } from '../../domain/partners/Partner';
 import type { PartnerDetails } from '../../domain/partners/PartnerDetails';
 import type { User } from '../../domain/people/User';

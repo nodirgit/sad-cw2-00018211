@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
+import { Buyer, BuyerGroup } from '../../domain/partners/Buyer';
 import { BuyerPicker } from '../components/PartnerPicker';
 import { SESSION_KIND_LABEL } from '../../domain/slaughter/SlaughterSession';
 import { CrossCheckStatus } from '../../domain/slaughter/WeightTally';

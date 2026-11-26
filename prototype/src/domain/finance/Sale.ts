@@ -1,5 +1,5 @@
 import { DomainError } from '../DomainError';
-import { Buyer } from './Buyer';
+import { Buyer } from '../partners/Buyer';
 import { FinancialEntry } from './FinancialEntry';
 
 /** Money in, against one batch (FR-03). Association: the Buyer (a partner) it was sold to. */

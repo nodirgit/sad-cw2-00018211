@@ -97,9 +97,9 @@ src/
   domain/            entities, value objects, enums, abstract classes — no React, no storage
     people/          User (abstract), Director, Worker
     farm/            Farm ◆ House ◆ Batch, BatchStatus, MortalityRecord
-    partners/        Partner (abstract) ← Buyer, Supplier; PartnerDetails (TIN, contacts)
-    feed/            Supplier, SupplierType, FeedDelivery
-    finance/         FinancialEntry (abstract), Expense, Sale, ExpenseCategory, CustomCategory, Buyer, BuyerGroup
+    partners/        Partner (abstract) ← Buyer (+ BuyerGroup), Supplier (+ SupplierType); PartnerDetails (TIN, contacts)
+    feed/            FeedDelivery
+    finance/         FinancialEntry (abstract), Expense, Sale, ExpenseCategory, ExpenseSource, CustomCategory
     slaughter/       SlaughterSession ◆ HeadCountRecord ◆ HeadCountCorrection, WeightTally, SessionKind, CrossCheckStatus
     environment/     SensorReading, ThresholdRange
     voice/           ParsedEntry, ParsedField

@@ -1,5 +1,5 @@
 import { DomainError } from '../DomainError';
-import { Supplier } from './Supplier';
+import { Supplier } from '../partners/Supplier';
 
 /**
  * FR-02: one feed delivery tied to its supplier and to the batch it was delivered for,
