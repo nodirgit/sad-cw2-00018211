@@ -2,20 +2,18 @@ import { useState } from 'react';
 import { useApp } from '../AppContext';
 import { useAction } from '../useAction';
 
-/** NFR-03: pick who you are, enter a 4-digit PIN. */
+/** NFR-03: enter your 4-digit PIN; the PIN says who you are. */
 export function LoginScreen() {
   const { c, login } = useApp();
-  const users = c.auth.listUsers();
-  const [userId, setUserId] = useState(users[0]?.getId() ?? '');
   const [pin, setPin] = useState('');
-  const { error, setError, run } = useAction();
+  const { error, run } = useAction();
 
   function press(digit: string) {
     if (pin.length >= 4) return;
     const next = pin + digit;
     setPin(next);
     if (next.length === 4) {
-      const user = run(() => c.auth.login(userId, next));
+      const user = run(() => c.auth.login(next));
       if (user) login(user);
       else setPin('');
     }
@@ -26,24 +24,6 @@ export function LoginScreen() {
       <div className="hero">
         <h1>Parranda Farm</h1>
         <p>Nurota Halol Parranda MCHJ</p>
-      </div>
-
-      <div className="section-title">Who are you?</div>
-      <div className="seg">
-        {users.map((u) => (
-          <button
-            key={u.getId()}
-            className={userId === u.getId() ? 'on' : ''}
-            onClick={() => {
-              setUserId(u.getId());
-              setPin('');
-              setError(null);
-            }}
-          >
-            {u.getName()}
-            <small>{u.roleName() === u.getName() ? 'owner' : u.roleName()}</small>
-          </button>
-        ))}
       </div>
 
       <div className="card">

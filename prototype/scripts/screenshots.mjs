@@ -55,8 +55,7 @@ async function type(selector, text) {
   await page.click(selector, { clickCount: 3 });
   await page.type(selector, text);
 }
-async function login(user, pin) {
-  await click(user);
+async function login(pin) {
   for (const d of pin) await click(d);
   await pause(400);
 }
@@ -68,7 +67,7 @@ await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle0' });
 
 await shot('login');
-await login('Director', '1234');
+await login('1234');
 await shot('director-home', true);
 
 // FR-08: switch House 2's light
@@ -175,7 +174,7 @@ await click('‹ Back');
 
 // NFR-03: worker sees no money and only the Main and Profile sections
 await click('Log out');
-await login('Worker 1', '1111');
+await login('1111');
 await shot('worker-home', true);
 await click('Feed delivery');
 await shot('worker-feed-no-cost', true);

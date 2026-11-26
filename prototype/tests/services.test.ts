@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AccessPolicy } from '../src/application/services/AccessPolicy';
+import { AuthService } from '../src/application/services/AuthService';
 import { BatchProfitService } from '../src/application/services/BatchProfitService';
 import { CrossCheckService } from '../src/application/services/CrossCheckService';
 import { FarmService } from '../src/application/services/FarmService';
@@ -47,6 +48,16 @@ function setup(now = new Date('2026-11-25T14:00:00')) {
   const crossCheck = new CrossCheckService(repos.sessions, profit, policy);
   return { repos, farm, mortality, profit, feed, slaughter, crossCheck, setClock: (d: Date) => (clock = d) };
 }
+
+describe('NFR-03 login', () => {
+  it('the PIN alone says who is logging in', () => {
+    const auth = new AuthService(new InMemoryRepository(DEMO_USERS));
+    expect(auth.login('1234').getName()).toBe('Director');
+    expect(auth.login('1111').getName()).toBe('Worker 1');
+    expect(auth.currentUser()?.getName()).toBe('Worker 1');
+    expect(() => auth.login('9999')).toThrow('Wrong PIN');
+  });
+});
 
 describe('FR-01 mortality', () => {
   it('flags the same death reported twice and does not count it', () => {
