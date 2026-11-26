@@ -85,13 +85,18 @@ export class BatchProfitService {
       .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
   }
 
-  /** Sales recorded directly (no cross-check), newest first. */
-  directSales(user: User): Sale[] {
+  /** Every sale of every batch (direct and Bazaar Agent), newest first. */
+  allSales(user: User): Sale[] {
     this.policy.requireDirector(user);
     return this.entries
       .findAll()
-      .filter((e): e is Sale => e instanceof Sale && !e.getBuyer().requiresCrossCheck())
+      .filter((e): e is Sale => e instanceof Sale)
       .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
+  }
+
+  /** Sales recorded directly (no cross-check), newest first. */
+  directSales(user: User): Sale[] {
+    return this.allSales(user).filter((s) => !s.getBuyer().requiresCrossCheck());
   }
 
   /** Why an entry cannot be changed here, or null when it can (a manual expense). */

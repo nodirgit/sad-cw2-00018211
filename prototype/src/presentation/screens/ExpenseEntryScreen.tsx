@@ -142,7 +142,7 @@ export function ExpenseEntryScreen({ editId }: { editId?: string }) {
   const recent = c.profit.manualExpenses(user).slice(0, 8);
 
   return (
-    <Screen title="Expense entry" subtitle="FR-03 · FR-06 · type it, or say it">
+    <Screen title={editing ? "Edit expense" : "Expenses"} subtitle="FR-03 · FR-06 · type it, or say it">
       {!editing && (
         <div className="card">
           {!voiceOpen ? (

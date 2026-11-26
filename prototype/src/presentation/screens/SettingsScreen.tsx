@@ -4,50 +4,13 @@ import type { House } from '../../domain/farm/House';
 import { SUPPLIER_TYPE_LABEL, Supplier, SupplierType } from '../../domain/feed/Supplier';
 import { useUser } from '../AppContext';
 import { ErrorNotice, Notice } from '../components/Notice';
+import { MenuRow } from '../components/MenuRow';
 import { EditButtons, RowActions } from '../components/RowActions';
 import { Screen } from '../components/Screen';
 import { dayMonth, num, parseNumber, toInputDate } from '../format';
 import { useAction } from '../useAction';
 
-/* Director settings, grouped like a phone's settings app: a menu, then one screen per topic. */
-
-function MenuRow({ icon, title, detail, onClick }: { icon: string; title: string; detail: string; onClick: () => void }) {
-  return (
-    <button className="menu-row" onClick={onClick}>
-      <span className="ico" aria-hidden>
-        {icon}
-      </span>
-      <span className="txt">
-        <b>{title}</b>
-        <span>{detail}</span>
-      </span>
-      <span className="chev" aria-hidden>
-        ›
-      </span>
-    </button>
-  );
-}
-
-/** Settings home: the topics. */
-export function SettingsScreen() {
-  const { c, go } = useUser();
-  const houses = c.farm.houses();
-  const suppliers = c.suppliers.activeSuppliers();
-  return (
-    <Screen title="Settings" subtitle="Director only">
-      <div className="section-title">Farm</div>
-      <div className="menu">
-        <MenuRow icon="🏠" title="Houses" detail={`${houses.length} ${houses.length === 1 ? 'house' : 'houses'} · batches · normal ranges`} onClick={() => go({ name: 'settings-houses' })} />
-        <MenuRow icon="🚚" title="Suppliers" detail={`${suppliers.length} chick and feed suppliers`} onClick={() => go({ name: 'settings-suppliers' })} />
-      </div>
-
-      <div className="section-title">App</div>
-      <div className="menu">
-        <MenuRow icon="🧪" title="Demo data" detail="What is invented · reset" onClick={() => go({ name: 'settings-demo' })} />
-      </div>
-    </Screen>
-  );
-}
+/* Director settings, grouped like a phone's settings app: the menu is on Profile, then one screen per topic. */
 
 /* ---------------- Houses (NFR-05, FR-07) ---------------- */
 

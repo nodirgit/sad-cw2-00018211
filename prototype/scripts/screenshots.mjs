@@ -98,7 +98,7 @@ await click('Save delivery');
 await shot('feed-delivery', true);
 await click('‹ Back');
 
-// FR-04 / NFR-04: new session, head count → pay, correction with note
+// FR-04 / NFR-04: Slaughter section — new session, head count → pay, correction with note
 await click('Slaughter');
 await click("Start tonight's session");
 await type('#count', '1100');
@@ -125,37 +125,36 @@ await top();
 await shot('crosscheck-match', true);
 await click('Record sale');
 await shot('crosscheck-sold', true);
-await click('‹ Back');
-await click('‹ Back');
 
-// FR-03 / FR-06: expense entry — typed form, voice helper fills it, unsure fields amber
-await click('Expense entry');
+// FR-03 / FR-06: Expenses section — typed form, voice helper fills it, unsure fields amber
+await click('Expenses');
 await shot('expense-entry', true);
 await click('Fill the form by voice');
 await click('Kecha veterinarga 150 ming');
 await shot('expense-voice-filled', true);
 await click('Bir narsa oldim');
 await shot('expense-voice-unsure', true);
-await click('‹ Back');
 
-// FR-03: direct sale (shop, Nurata seller, client)
+// FR-03: Sales section — direct sale (shop, Nurata seller, client), then the latest sales
+await click('Sales');
 await click('Direct sale');
 await type('#kg', '150');
 await click('Save sale');
 await shot('direct-sale', true);
 await click('‹ Back');
+await shot('sales', true);
 
-// FR-03: batch profit, both houses
+// FR-03: batch profit, both houses (Main section)
+await click('Main');
 await click('Batch profit');
 await shot('profit-house-1', true);
 await click('House 2');
 await top();
 await shot('profit-house-2', true);
-await click('‹ Back');
 
-// NFR-05 / FR-07: settings, grouped like a phone's settings
-await click('Settings');
-await shot('settings', true);
+// NFR-05 / FR-07: Profile section — settings grouped like a phone's settings
+await click('Profile');
+await shot('profile', true);
 await click('Houses');
 await shot('settings-houses', true);
 await click('House 2');
@@ -168,14 +167,15 @@ await click('‹ Back');
 await click('Suppliers');
 await shot('settings-suppliers', true);
 await click('‹ Back');
-await click('‹ Back');
 
-// NFR-03: worker sees no money
+// NFR-03: worker sees no money and only the Main and Profile sections
 await click('Log out');
 await login('Worker 1', '1111');
 await shot('worker-home', true);
 await click('Feed delivery');
 await shot('worker-feed-no-cost', true);
+await click('Profile');
+await shot('worker-profile', true);
 
 await browser.close();
 if (errors.length) {

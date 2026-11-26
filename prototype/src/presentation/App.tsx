@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { Container } from '../app/container';
 import type { User } from '../domain/people/User';
-import { AppCtx, AppState, Route } from './AppContext';
+import { AppCtx, AppState, Route, TAB_ROOT, TabId } from './AppContext';
 import { DirectorOnly } from './components/DirectorOnly';
+import { TabBar } from './components/TabBar';
 import { BatchProfitScreen } from './screens/BatchProfitScreen';
 import { CrossCheckScreen } from './screens/CrossCheckScreen';
 import { DirectorHome } from './screens/DirectorHome';
@@ -11,38 +12,61 @@ import { ExpenseEntryScreen } from './screens/ExpenseEntryScreen';
 import { FeedDeliveryScreen } from './screens/FeedDeliveryScreen';
 import { LogDeathScreen } from './screens/LogDeathScreen';
 import { LoginScreen } from './screens/LoginScreen';
-import { DemoDataScreen, HouseNewScreen, HouseSettingsScreen, HousesScreen, SettingsScreen, SuppliersScreen } from './screens/SettingsScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { SalesScreen } from './screens/SalesScreen';
+import { DemoDataScreen, HouseNewScreen, HouseSettingsScreen, HousesScreen, SuppliersScreen } from './screens/SettingsScreen';
 import { SlaughterScreen } from './screens/SlaughterScreen';
 import { WorkerHome } from './screens/WorkerHome';
 
-/** Presentation root: holds who is logged in and which screen is open. No business rules here. */
+interface Nav {
+  tab: TabId;
+  stack: Route[];
+}
+const START: Nav = { tab: 'main', stack: [TAB_ROOT.main] };
+
+/** Presentation root: holds who is logged in, the open section and its screens. No business rules here. */
 export function App({ container }: { container: Container }) {
   const [user, setUser] = useState<User | null>(null);
-  const [stack, setStack] = useState<Route[]>([{ name: 'home' }]);
+  const [nav, setNav] = useState<Nav>(START);
   const [, setVersion] = useState(0);
 
   const state: AppState = {
     c: container,
     user,
-    route: stack[stack.length - 1],
-    go: (route) => setStack((s) => [...s, route]),
-    back: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+    route: nav.stack[nav.stack.length - 1],
+    tab: nav.tab,
+    canGoBack: nav.stack.length > 1,
+    go: (route) => setNav((n) => ({ ...n, stack: [...n.stack, route] })),
+    back: () => setNav((n) => (n.stack.length > 1 ? { ...n, stack: n.stack.slice(0, -1) } : n)),
+    switchTab: (tab) => {
+      setNav({ tab, stack: [TAB_ROOT[tab]] });
+      window.scrollTo(0, 0);
+    },
     // The LoginScreen has already checked the PIN through AuthService.
     login: (u) => {
       setUser(u);
-      setStack([{ name: 'home' }]);
+      setNav(START);
     },
     logout: () => {
       container.auth.logout();
       setUser(null);
-      setStack([{ name: 'home' }]);
+      setNav(START);
     },
     refresh: () => setVersion((v) => v + 1),
   };
 
   return (
     <AppCtx.Provider value={state}>
-      <div className="app">{user ? <Router /> : <LoginScreen />}</div>
+      <div className="app">
+        {user ? (
+          <>
+            <Router />
+            <TabBar />
+          </>
+        ) : (
+          <LoginScreen />
+        )}
+      </div>
     </AppCtx.Provider>
   );
 }
@@ -61,6 +85,8 @@ function screenFor(s: AppState) {
       return <LogDeathScreen houseId={r.houseId} />;
     case 'feed':
       return <FeedDeliveryScreen houseId={r.houseId} />;
+    case 'profile':
+      return <ProfileScreen />;
     // NFR-03: money screens only under the Director's login
     case 'profit':
       return director ? <BatchProfitScreen /> : <DirectorOnly />;
@@ -68,12 +94,12 @@ function screenFor(s: AppState) {
       return director ? <SlaughterScreen /> : <DirectorOnly />;
     case 'crosscheck':
       return director ? <CrossCheckScreen sessionId={r.sessionId} /> : <DirectorOnly />;
+    case 'sales':
+      return director ? <SalesScreen /> : <DirectorOnly />;
     case 'sale':
       return director ? <DirectSaleScreen /> : <DirectorOnly />;
     case 'expense':
       return director ? <ExpenseEntryScreen editId={r.editId} /> : <DirectorOnly />;
-    case 'settings':
-      return director ? <SettingsScreen /> : <DirectorOnly />;
     case 'settings-houses':
       return director ? <HousesScreen /> : <DirectorOnly />;
     case 'settings-house':

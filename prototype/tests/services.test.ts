@@ -290,12 +290,15 @@ describe('Editing and deleting records', () => {
     expect(() => s.profit.deleteEntry('sale-demo-1', director)).toThrow('cross-check');
   });
 
-  it('lists direct sales (shop, Nurata seller, client) but not Bazaar Agent sales', () => {
+  it('lists all sales, and direct sales (shop, Nurata seller, client) without Bazaar Agent sales', () => {
     const s = setup();
     const sale = s.profit.recordDirectSale('house-2', new NurataSeller('Nurata market'), 150, 27000, new Date(), director);
     const list = s.profit.directSales(director);
     expect(list.map((x) => x.getId())).toContain(sale.getId());
     expect(list.every((x) => !x.getBuyer().requiresCrossCheck())).toBe(true);
+    const all = s.profit.allSales(director).map((x) => x.getId());
+    expect(all).toContain(sale.getId());
+    expect(all).toContain('sale-demo-1');
     expect(sale.getBatchId()).toBe('batch-h2');
     expect(() => s.profit.directSales(worker1)).toThrow('Only the Director');
     expect(() => s.profit.recordDirectSale('house-2', new BazaarAgent('a'), 10, 26000, new Date(), director)).toThrow('cross-check');

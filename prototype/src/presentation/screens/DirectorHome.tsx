@@ -4,17 +4,14 @@ import { HouseCard } from '../components/HouseCard';
 import { Screen } from '../components/Screen';
 import { useTicker } from '../useTicker';
 
+/** Things done from the houses; slaughter, sales, expenses and settings have their own sections in the bottom bar. */
 const ACTIONS: { label: string; req: string; route: Route }[] = [
   { label: 'Log death', req: 'FR-01', route: { name: 'death' } },
   { label: 'Feed delivery', req: 'FR-02', route: { name: 'feed' } },
-  { label: 'Slaughter', req: 'FR-04 · NFR-04', route: { name: 'slaughter' } },
-  { label: 'Agent cross-check', req: 'FR-05', route: { name: 'crosscheck' } },
-  { label: 'Expense entry', req: 'FR-03 · FR-06 voice', route: { name: 'expense' } },
-  { label: 'Direct sale', req: 'FR-03 · shop, Nurata, clients', route: { name: 'sale' } },
-  { label: 'Batch profit', req: 'FR-03', route: { name: 'profit' } },
+  { label: 'Batch profit', req: 'FR-03 · each batch on its own', route: { name: 'profit' } },
 ];
 
-/** Director's home: every house live, every action, money screens included. */
+/** Director's Main section: every house live, then the house actions and the profit overview. */
 export function DirectorHome() {
   const { c, go, refresh } = useUser();
   useTicker(refresh, 3000);
@@ -37,10 +34,6 @@ export function DirectorHome() {
         <button className="tile disabled" disabled aria-disabled>
           <b>Flock density</b>
           <span>FR-09 · coming later (needs camera analytics)</span>
-        </button>
-        <button className="tile" onClick={() => go({ name: 'settings' })}>
-          <b>Settings</b>
-          <span>Houses · suppliers · demo data</span>
         </button>
       </div>
     </Screen>

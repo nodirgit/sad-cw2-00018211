@@ -34,19 +34,22 @@ Other commands:
 
 ## Screens and requirements
 
+After login a **bottom bar** holds the main sections, like a phone app: **Main** (houses, log death, feed delivery, batch profit) · **Slaughter** (sessions, crew pay, agent cross-check) · **Sales** (direct sale, Bazaar Agent sale, latest sales) · **Expenses** (expense entry) · **Profile** (who is logged in, settings, log out). Each section keeps its own screens with *Back*; tapping a section opens its first screen. A Worker's bar has only **Main** and **Profile** (NFR-03).
+
 | Screen | Requirement | What it shows |
 |---|---|---|
 | Login | NFR-03 | user + 4-digit PIN |
-| Director home | FR-07, FR-08, NFR-01 | one card per house: batch day, chicks, deaths today / in batch, live temperature and humidity with an alert outside the house's range, light switch |
-| Worker home | NFR-03 | the same house cards, only *Log death* and *Feed delivery*, no money anywhere |
+| Main (Director) | FR-07, FR-08, NFR-01 | one card per house: batch day, chicks, deaths today / in batch, live temperature and humidity with an alert outside the house's range, light switch; tiles *Log death*, *Feed delivery*, *Batch profit* |
+| Main (Worker) | NFR-03 | the same house cards, only *Log death* and *Feed delivery*, no money anywhere |
 | Log death | FR-01, NFR-02 | house + count + Save; the same count in the same house within 2 minutes is flagged **possible duplicate** and not counted twice, with "it was a different bird — count it"; latest entries can be corrected or deleted |
 | Feed delivery | FR-02, NFR-03 | supplier → house → that house's open batch; feed per bird for the batch; the cost field only for the Director, and it becomes a batch cost; deliveries can be corrected or deleted |
 | Batch profit | FR-03 | per house: running profit, costs by category, sales by buyer, entries — each batch on its own; manual expenses and direct sales can be edited or deleted here, linked entries say where they are changed |
 | Slaughter session | FR-04, NFR-04 | head count + rate → crew payment shown at once; "Correct count" needs a note and keeps the history; an empty session can be deleted |
 | Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; *Record sale* only on MATCH; *Undo sale* if it was recorded by mistake |
+| Sales | FR-03, FR-05 | *Direct sale* and *Bazaar Agent sale* (opens the cross-check), then the latest sales of all buyers with the total |
 | Direct sale | FR-03 | sales to the Nurata seller, the shop and clients: buyer, kg, price per kg (prefilled from the case's prices), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
-| Expense entry | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
-| Settings | FR-07, NFR-05 | grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Demo data** (what is invented, reset) |
+| Expenses | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
+| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 
 Screenshots of every screen are in [`screenshots/`](screenshots).
