@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 28 unit tests of the business rules (Vitest) |
+| `npm test` | 29 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -44,6 +44,7 @@ Other commands:
 | Batch profit | FR-03 | per house: running profit, costs by category, sales by buyer, entries — each batch on its own; manual expenses and direct sales can be edited or deleted here, linked entries say where they are changed |
 | Slaughter session | FR-04, NFR-04 | head count + rate → crew payment shown at once; "Correct count" needs a note and keeps the history; an empty session can be deleted |
 | Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; *Record sale* only on MATCH; *Undo sale* if it was recorded by mistake |
+| Direct sale | FR-03 | sales to the Nurata seller, the shop and clients: buyer, kg, price per kg (prefilled from the case's prices), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
 | Expense entry | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
 | Settings | FR-07, NFR-05 | grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |

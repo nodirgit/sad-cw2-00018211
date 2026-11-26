@@ -138,6 +138,13 @@ await click('Bir narsa oldim');
 await shot('expense-voice-unsure', true);
 await click('‹ Back');
 
+// FR-03: direct sale (shop, Nurata seller, client)
+await click('Direct sale');
+await type('#kg', '150');
+await click('Save sale');
+await shot('direct-sale', true);
+await click('‹ Back');
+
 // FR-03: batch profit, both houses
 await click('Batch profit');
 await shot('profit-house-1', true);

@@ -10,6 +10,7 @@ const ACTIONS: { label: string; req: string; route: Route }[] = [
   { label: 'Slaughter', req: 'FR-04 · NFR-04', route: { name: 'slaughter' } },
   { label: 'Agent cross-check', req: 'FR-05', route: { name: 'crosscheck' } },
   { label: 'Expense entry', req: 'FR-03 · FR-06 voice', route: { name: 'expense' } },
+  { label: 'Direct sale', req: 'FR-03 · shop, Nurata, clients', route: { name: 'sale' } },
   { label: 'Batch profit', req: 'FR-03', route: { name: 'profit' } },
 ];
 

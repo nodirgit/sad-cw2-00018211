@@ -6,6 +6,7 @@ import { DirectorOnly } from './components/DirectorOnly';
 import { BatchProfitScreen } from './screens/BatchProfitScreen';
 import { CrossCheckScreen } from './screens/CrossCheckScreen';
 import { DirectorHome } from './screens/DirectorHome';
+import { DirectSaleScreen } from './screens/DirectSaleScreen';
 import { ExpenseEntryScreen } from './screens/ExpenseEntryScreen';
 import { FeedDeliveryScreen } from './screens/FeedDeliveryScreen';
 import { LogDeathScreen } from './screens/LogDeathScreen';
@@ -67,6 +68,8 @@ function screenFor(s: AppState) {
       return director ? <SlaughterScreen /> : <DirectorOnly />;
     case 'crosscheck':
       return director ? <CrossCheckScreen sessionId={r.sessionId} /> : <DirectorOnly />;
+    case 'sale':
+      return director ? <DirectSaleScreen /> : <DirectorOnly />;
     case 'expense':
       return director ? <ExpenseEntryScreen editId={r.editId} /> : <DirectorOnly />;
     case 'settings':

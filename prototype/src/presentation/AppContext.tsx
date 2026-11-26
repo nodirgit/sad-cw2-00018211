@@ -11,6 +11,7 @@ export type Route =
   | { name: 'slaughter' }
   | { name: 'crosscheck'; sessionId?: string }
   | { name: 'expense'; editId?: string }
+  | { name: 'sale' }
   | { name: 'settings' }
   | { name: 'settings-houses' }
   | { name: 'settings-house'; houseId: string }

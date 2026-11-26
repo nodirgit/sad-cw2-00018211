@@ -85,6 +85,15 @@ export class BatchProfitService {
       .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
   }
 
+  /** Sales recorded directly (no cross-check), newest first. */
+  directSales(user: User): Sale[] {
+    this.policy.requireDirector(user);
+    return this.entries
+      .findAll()
+      .filter((e): e is Sale => e instanceof Sale && !e.getBuyer().requiresCrossCheck())
+      .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
+  }
+
   /** Why an entry cannot be changed here, or null when it can (a manual expense). */
   lockReason(entry: FinancialEntry): string | null {
     // FR-05: a Bazaar Agent sale belongs to its slaughter session's cross-check (polymorphism: requiresCrossCheck()).
