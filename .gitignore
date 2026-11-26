@@ -4,3 +4,5 @@ dist/
 diagrams/tools/
 submission/
 *.mp4
+report/*.docx
+report/~$*

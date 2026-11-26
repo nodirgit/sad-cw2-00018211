@@ -5,6 +5,7 @@
 !pragma layout elk
 skinparam classAttributeIconSize 0
 skinparam shadowing false
+skinparam dpi 200
 skinparam monochrome true
 skinparam defaultFontName Arial
 skinparam defaultFontSize 13

@@ -1,0 +1,13 @@
+{
+  "name": "sad-cw2-report-build",
+  "private": true,
+  "type": "module",
+  "description": "Builds report/SAD_CW2_00018211.docx (SAD CW2, student 00018211)",
+  "scripts": {
+    "build": "node build.mjs",
+    "shots": "node shots.mjs"
+  },
+  "dependencies": {
+    "docx": "9.5.1"
+  }
+}
