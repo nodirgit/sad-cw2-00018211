@@ -22,14 +22,21 @@ interface Form {
 
 const emptyForm = (): Form => ({ amount: '', date: toInputDate(new Date()), category: '', reason: '' });
 
-const formOf = (e: Expense): Form => ({ amount: String(e.getAmount()), date: toInputDate(e.getDate()), category: e.getCategory(), reason: e.getNote() });
+/** The form's category value: a built-in ExpenseCategory, or "custom:<id>" for one of the Director's own. */
+const CUSTOM = 'custom:';
+const categoryValue = (e: Expense) => {
+  const custom = e.getCustomCategory();
+  return custom ? CUSTOM + custom.getId() : e.getCategory();
+};
+
+const formOf = (e: Expense): Form => ({ amount: String(e.getAmount()), date: toInputDate(e.getDate()), category: categoryValue(e), reason: e.getNote() });
 
 /**
  * FR-03 + FR-06: small costs are typed into the form, or said aloud and the voice helper
  * fills the same form. Anything the parser is unsure of is amber until the Director checks it.
  */
 export function ExpenseEntryScreen({ editId }: { editId?: string }) {
-  const { c, user, refresh } = useUser();
+  const { c, user, go, refresh } = useUser();
   const defaultHouse = useDefaultHouse();
   const startEdit = editId ? c.profit.manualExpenses(user).find((e) => e.getId() === editId) : undefined;
 
@@ -96,13 +103,14 @@ export function ExpenseEntryScreen({ editId }: { editId?: string }) {
     if (unsure.size > 0) return setError('Check the amber fields first: the app never guesses (FR-06).');
     const amount = form.amount ? parseNumber(form.amount) : null;
     const date = form.date ? new Date(`${form.date}T12:00:00`) : null;
-    const category = (form.category as ExpenseCategory) || null;
+    const custom = form.category.startsWith(CUSTOM) ? (c.categories.find(form.category.slice(CUSTOM.length)) ?? null) : null;
+    const category = custom ? ExpenseCategory.OTHER : (form.category as ExpenseCategory) || null;
     const exp = run(() => {
       if (editing) {
         if (amount === null || date === null || category === null) throw new Error('Fill in amount, date and category.');
-        return c.profit.editExpense(editing.getId(), category, amount, form.reason, date, user);
+        return c.profit.editExpense(editing.getId(), category, amount, form.reason, date, user, custom);
       }
-      return c.voice.confirm({ houseId, amount, date, category, reason: form.reason }, user);
+      return c.voice.confirm({ houseId, amount, date, category, customCategory: custom, reason: form.reason }, user);
     });
     if (exp) {
       setSaved(`${editing ? 'Changes saved' : 'Expense saved'}: ${exp.describe()}, ${uzs(exp.getAmount())}, ${dayMonth(exp.getDate())}, ${c.farm.houseOfBatch(exp.getBatchId())?.getName()} batch.`);
@@ -127,6 +135,15 @@ export function ExpenseEntryScreen({ editId }: { editId?: string }) {
       refresh();
     }
   }
+
+  // Built-in categories first, then the Director's own (an archived one only when editing an expense that uses it).
+  const editingCustom = editing?.getCustomCategory();
+  const customs = c.categories.activeCategories();
+  if (editingCustom && !customs.some((x) => x.getId() === editingCustom.getId())) customs.push(editingCustom);
+  const categoryOptions = [
+    ...Object.values(ExpenseCategory).map((cat) => ({ value: cat as string, label: EXPENSE_CATEGORY_LABEL[cat] })),
+    ...customs.map((x) => ({ value: CUSTOM + x.getId(), label: x.isActive() ? x.getName() : `${x.getName()} (removed)` })),
+  ];
 
   const cls = (k: FieldName) => `input ${unsure.has(k) ? 'flag' : ''}`;
   const unsureChip = (k: FieldName) =>
@@ -199,19 +216,22 @@ export function ExpenseEntryScreen({ editId }: { editId?: string }) {
         <div className="field" style={{ marginTop: 10 }}>
           <label>Category</label>
           <div className="seg" style={{ gridAutoFlow: 'row', gridTemplateColumns: 'repeat(3, 1fr)' }} role="radiogroup" aria-label="Category">
-            {Object.values(ExpenseCategory).map((cat) => (
+            {categoryOptions.map((o) => (
               <button
-                key={cat}
-                className={form.category === cat ? 'on' : ''}
+                key={o.value}
+                className={form.category === o.value ? 'on' : ''}
                 style={unsure.has('category') ? { borderColor: 'var(--amber-line)' } : undefined}
-                onClick={() => set('category')({ target: { value: cat } })}
+                onClick={() => set('category')({ target: { value: o.value } })}
                 role="radio"
-                aria-checked={form.category === cat}
+                aria-checked={form.category === o.value}
               >
-                {EXPENSE_CATEGORY_LABEL[cat]}
+                {o.label}
               </button>
             ))}
           </div>
+          <button className="linkbtn small muted" style={{ marginTop: 4 }} onClick={() => go({ name: 'settings-categories' })}>
+            Add or change your own categories ›
+          </button>
           {unsureChip('category')}
         </div>
         <div className="field" style={{ marginTop: 10 }}>

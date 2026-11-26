@@ -167,6 +167,11 @@ await click('‹ Back');
 await click('Suppliers');
 await shot('settings-suppliers', true);
 await click('‹ Back');
+await click('Expense categories');
+await type('input[aria-label="Category name"]', 'Electricity');
+await click('Add category');
+await shot('settings-expense-categories', true);
+await click('‹ Back');
 
 // NFR-03: worker sees no money and only the Main and Profile sections
 await click('Log out');

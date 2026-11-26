@@ -9,6 +9,7 @@ import { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
 import { BazaarAgent, Buyer, Client, NurataSeller, ShopCustomer } from '../../domain/finance/Buyer';
+import { CustomCategory } from '../../domain/finance/CustomCategory';
 import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
@@ -55,6 +56,11 @@ export const farmSerializer: Serializer<Farm> = {
 export const supplierSerializer: Serializer<Supplier> = {
   toRecord: (s) => ({ id: s.getId(), name: s.getName(), type: s.getType(), active: s.isActive() }),
   fromRecord: (r) => new Supplier(r.id, r.name, r.type as SupplierType, r.active !== false),
+};
+
+export const categorySerializer: Serializer<CustomCategory> = {
+  toRecord: (c) => ({ id: c.getId(), name: c.getName(), active: c.isActive() }),
+  fromRecord: (r) => new CustomCategory(r.id, r.name, r.active !== false),
 };
 
 export function mortalitySerializer(users: Repository<User>): Serializer<MortalityRecord> {
@@ -114,18 +120,23 @@ function legacySource(id: string): ExpenseSource {
   return ExpenseSource.MANUAL;
 }
 
-export const financeSerializer: Serializer<FinancialEntry> = {
-  toRecord: (e) => {
-    const base = { id: e.getId(), batchId: e.getBatchId(), date: e.getDate().toISOString(), amount: e.getAmount() };
-    if (e instanceof Expense) return { ...base, kind: 'expense', category: e.getCategory(), note: e.getNote(), source: e.getSource() };
-    if (e instanceof Sale) return { ...base, kind: 'sale', buyerType: e.getBuyer().typeLabel(), buyerName: e.getBuyer().getName(), kg: e.getKg(), pricePerKg: e.getPricePerKg() };
-    throw new DomainError('Unknown financial entry');
-  },
-  fromRecord: (r) =>
-    r.kind === 'sale'
-      ? new Sale(r.id, r.batchId, d(r.date), buyerFrom(r.buyerType, r.buyerName), r.kg, r.pricePerKg)
-      : new Expense(r.id, r.batchId, d(r.date), r.amount, r.category as ExpenseCategory, r.note, (r.source as ExpenseSource) ?? legacySource(r.id)),
-};
+export function financeSerializer(categories: Repository<CustomCategory>): Serializer<FinancialEntry> {
+  return {
+    toRecord: (e) => {
+      const base = { id: e.getId(), batchId: e.getBatchId(), date: e.getDate().toISOString(), amount: e.getAmount() };
+      if (e instanceof Expense)
+        return { ...base, kind: 'expense', category: e.getCategory(), note: e.getNote(), source: e.getSource(), customCategoryId: e.getCustomCategory()?.getId() ?? null };
+      if (e instanceof Sale) return { ...base, kind: 'sale', buyerType: e.getBuyer().typeLabel(), buyerName: e.getBuyer().getName(), kg: e.getKg(), pricePerKg: e.getPricePerKg() };
+      throw new DomainError('Unknown financial entry');
+    },
+    fromRecord: (r) => {
+      if (r.kind === 'sale') return new Sale(r.id, r.batchId, d(r.date), buyerFrom(r.buyerType, r.buyerName), r.kg, r.pricePerKg);
+      // A category is archived, never erased; if one is missing anyway the expense shows as Other instead of breaking the app.
+      const custom = r.customCategoryId ? (categories.findById(r.customCategoryId) ?? null) : null;
+      return new Expense(r.id, r.batchId, d(r.date), r.amount, r.category as ExpenseCategory, r.note, (r.source as ExpenseSource) ?? legacySource(r.id), custom);
+    },
+  };
+}
 
 export const sessionSerializer: Serializer<SlaughterSession> = {
   toRecord: (s) => {

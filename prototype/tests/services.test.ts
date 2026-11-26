@@ -8,6 +8,10 @@ import { LightingService } from '../src/application/services/LightingService';
 import { MonitoringService } from '../src/application/services/MonitoringService';
 import { MortalityService } from '../src/application/services/MortalityService';
 import { SupplierService } from '../src/application/services/SupplierService';
+import { ExpenseCategoryService } from '../src/application/services/ExpenseCategoryService';
+import { VoiceEntryService } from '../src/application/services/VoiceEntryService';
+import { RuleBasedVoiceParser } from '../src/infrastructure/voice/RuleBasedVoiceParser';
+import { financeSerializer } from '../src/infrastructure/persistence/serializers';
 import { SupplierType } from '../src/domain/feed/Supplier';
 import { SlaughterService } from '../src/application/services/SlaughterService';
 import { DomainError } from '../src/domain/DomainError';
@@ -210,6 +214,46 @@ describe('NFR-05 suppliers by configuration', () => {
     expect(s.feed.feedSuppliers().map((x) => x.getId())).not.toContain(c.getId());
     expect(delivery.getSupplier().getName()).toBe('Demo Feed Factory C (Navoi)');
     expect(() => s.feed.recordDelivery('house-1', c.getId(), 500, null, worker1)).toThrow('Pick a supplier');
+  });
+});
+
+describe('NFR-05 expense categories by configuration', () => {
+  it('the Director adds, renames and removes own categories; built-in names stay reserved', () => {
+    const cats = new ExpenseCategoryService(new InMemoryRepository<any>(), new AccessPolicy());
+    const power = cats.addCategory('Electricity', director);
+    expect(cats.activeCategories().map((c) => c.getName())).toEqual(['Electricity']);
+    expect(() => cats.addCategory('electricity', director)).toThrow('already');
+    expect(() => cats.addCategory('Feed', director)).toThrow('built-in');
+    expect(() => cats.addCategory('  ', director)).toThrow(DomainError);
+    expect(() => cats.addCategory('Gas', worker1)).toThrow('Only the Director');
+    cats.renameCategory(power.getId(), 'Electricity & gas', director);
+    cats.removeCategory(power.getId(), director);
+    expect(cats.activeCategories()).toHaveLength(0);
+    expect(cats.find(power.getId())?.getName()).toBe('Electricity & gas');
+  });
+
+  it('an expense in an own category is grouped under its name, and keeps it after the category is removed', () => {
+    const s = setup();
+    const catRepo = new InMemoryRepository<any>();
+    const cats = new ExpenseCategoryService(catRepo, new AccessPolicy());
+    const voice = new VoiceEntryService(new RuleBasedVoiceParser(), s.profit);
+    const repairs = cats.addCategory('Repairs', director);
+    const e = voice.confirm({ houseId: 'house-2', amount: 300_000, date: new Date(), category: null, customCategory: repairs, reason: 'fan motor' }, director);
+    expect(e.getCategory()).toBe(ExpenseCategory.OTHER);
+    expect(e.describe()).toBe('Repairs — fan motor');
+    expect(s.profit.profitFor('batch-h2', director).costsByCategory['Repairs']).toBe(300_000);
+    cats.removeCategory(repairs.getId(), director);
+    expect(s.profit.profitFor('batch-h2', director).costsByCategory['Repairs']).toBe(300_000);
+    // saved and loaded again: the expense finds its category by id
+    const ser = financeSerializer(catRepo);
+    const loaded = ser.fromRecord(JSON.parse(JSON.stringify(ser.toRecord(e)))) as Expense;
+    expect(loaded.categoryLabel()).toBe('Repairs');
+    // a missing category falls back to Other instead of breaking
+    const orphan = financeSerializer(new InMemoryRepository<any>()).fromRecord(JSON.parse(JSON.stringify(ser.toRecord(e)))) as Expense;
+    expect(orphan.categoryLabel()).toBe('Other');
+    // and it can be moved back to a built-in category
+    const moved = s.profit.editExpense(e.getId(), ExpenseCategory.VET, 300_000, 'fan motor', new Date(), director);
+    expect(moved.getCustomCategory()).toBeNull();
   });
 });
 

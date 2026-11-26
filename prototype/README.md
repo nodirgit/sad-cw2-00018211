@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 29 unit tests of the business rules (Vitest) |
+| `npm test` | 31 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -49,7 +49,7 @@ After login a **bottom bar** holds the main sections, like a phone app: **Main**
 | Sales | FR-03, FR-05 | *Direct sale* and *Bazaar Agent sale* (opens the cross-check), then the latest sales of all buyers with the total |
 | Direct sale | FR-03 | sales to the Nurata seller, the shop and clients: buyer, kg, price per kg (prefilled from the case's prices), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
 | Expenses | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
-| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Demo data** (what is invented, reset) |
+| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Expense categories** (the six built-in ones are fixed; add, rename and delete your own, which appear as extra buttons on the Expenses form and in Batch profit), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 
 Screenshots of every screen are in [`screenshots/`](screenshots).
@@ -69,6 +69,7 @@ Every record a person enters can be corrected or deleted, unless another record 
 | House | name, capacity | when no open batch | capacity never below the chicks placed; at least one house |
 | Batch | chicks placed, start date; close / reopen | — | its records hang on it |
 | Supplier | name | yes (archived) | past deliveries keep the name |
+| Expense category (your own) | name | yes (archived) | past expenses keep the name; the six built-in categories are fixed (feed deliveries, crew pay and the voice helper use them) |
 
 ## What is simulated or demo
 
@@ -91,7 +92,7 @@ src/
   application/
     ports/           interfaces: Repository<T>, VoiceParser, SensorProvider, LightController, SpeechRecognizer
     services/        one responsibility each (SRP): AuthService, AccessPolicy, FarmService, MortalityService,
-                     FeedService, SupplierService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
+                     FeedService, SupplierService, ExpenseCategoryService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
                      MonitoringService, LightingService
   domain/            entities, value objects, enums, abstract classes — no React, no storage
     people/          User (abstract), Director, Worker

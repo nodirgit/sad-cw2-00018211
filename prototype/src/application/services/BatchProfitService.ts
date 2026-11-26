@@ -1,5 +1,6 @@
 import { DomainError } from '../../domain/DomainError';
 import { Buyer } from '../../domain/finance/Buyer';
+import { CustomCategory } from '../../domain/finance/CustomCategory';
 import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
@@ -17,7 +18,8 @@ export interface BuyerTotal {
 
 export interface BatchProfit {
   batchId: string;
-  costsByCategory: Partial<Record<ExpenseCategory, number>>;
+  /** Category name (built-in or the Director's own) → total. */
+  costsByCategory: Record<string, number>;
   salesByBuyer: BuyerTotal[];
   totalCosts: number;
   totalSales: number;
@@ -38,9 +40,12 @@ export class BatchProfitService {
   }
 
   /** FR-03 edge case: the cost goes to the batch open in that house, not a shared pool. */
-  recordExpense(houseId: string, category: ExpenseCategory, amount: number, note: string, date: Date, user: User, id: string = newId('exp')): Expense {
+  recordExpense(houseId: string, category: ExpenseCategory, amount: number, note: string, date: Date, user: User, customCategory: CustomCategory | null = null): Expense {
+    this.policy.requireDirector(user);
     const batch = this.farm.openBatch(houseId);
-    return this.recordExpenseForBatch(batch.getId(), category, amount, note, date, user, id);
+    const expense = new Expense(newId('exp'), batch.getId(), date, amount, category, note, ExpenseSource.MANUAL, customCategory);
+    this.entries.save(expense);
+    return expense;
   }
 
   /** Used when the batch is already known (crew pay for a session, a feed delivery). Same id = replace. */
@@ -109,10 +114,10 @@ export class BatchProfitService {
   }
 
   /** Correct a hand-typed expense; it stays on its batch. */
-  editExpense(expenseId: string, category: ExpenseCategory, amount: number, note: string, date: Date, user: User): Expense {
+  editExpense(expenseId: string, category: ExpenseCategory, amount: number, note: string, date: Date, user: User, customCategory: CustomCategory | null = null): Expense {
     this.policy.requireDirector(user);
     const old = this.manualExpense(expenseId);
-    const updated = new Expense(old.getId(), old.getBatchId(), date, amount, category, note.trim(), ExpenseSource.MANUAL);
+    const updated = new Expense(old.getId(), old.getBatchId(), date, amount, category, note.trim(), ExpenseSource.MANUAL, customCategory);
     this.entries.save(updated);
     return updated;
   }
@@ -167,11 +172,12 @@ export class BatchProfitService {
       .filter((e) => e.getBatchId() === batchId)
       .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
 
-    const costsByCategory: Partial<Record<ExpenseCategory, number>> = {};
+    const costsByCategory: Record<string, number> = {};
     const byBuyer = new Map<string, BuyerTotal>();
     for (const e of entries) {
       if (e instanceof Expense) {
-        costsByCategory[e.getCategory()] = (costsByCategory[e.getCategory()] ?? 0) + e.getAmount();
+        const label = e.categoryLabel();
+        costsByCategory[label] = (costsByCategory[label] ?? 0) + e.getAmount();
       } else if (e instanceof Sale) {
         const key = e.getBuyer().typeLabel();
         const t = byBuyer.get(key) ?? { buyerType: key, kg: 0, amount: 0 };

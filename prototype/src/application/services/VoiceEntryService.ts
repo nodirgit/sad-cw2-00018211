@@ -1,4 +1,5 @@
 import { DomainError } from '../../domain/DomainError';
+import { CustomCategory } from '../../domain/finance/CustomCategory';
 import { Expense, ExpenseCategory } from '../../domain/finance/Expense';
 import { User } from '../../domain/people/User';
 import { ParsedEntry } from '../../domain/voice/ParsedEntry';
@@ -11,6 +12,8 @@ export interface ConfirmedEntry {
   amount: number | null;
   date: Date | null;
   category: ExpenseCategory | null;
+  /** One of the Director's own categories, picked on the form instead of a built-in one. */
+  customCategory?: CustomCategory | null;
   reason: string;
 }
 
@@ -33,8 +36,9 @@ export class VoiceEntryService {
   confirm(entry: ConfirmedEntry, user: User): Expense {
     if (entry.amount === null || !(entry.amount > 0)) throw new DomainError('Confirm the amount.');
     if (entry.date === null) throw new DomainError('Confirm the date.');
-    if (entry.category === null) throw new DomainError('Confirm the category.');
+    if (entry.category === null && !entry.customCategory) throw new DomainError('Confirm the category.');
     if (!entry.reason.trim()) throw new DomainError('Confirm the reason.');
-    return this.profit.recordExpense(entry.houseId, entry.category, entry.amount, entry.reason.trim(), entry.date, user);
+    const category = entry.customCategory ? ExpenseCategory.OTHER : (entry.category as ExpenseCategory);
+    return this.profit.recordExpense(entry.houseId, category, entry.amount, entry.reason.trim(), entry.date, user, entry.customCategory ?? null);
   }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Batch } from '../../domain/farm/Batch';
 import type { House } from '../../domain/farm/House';
-import { EXPENSE_CATEGORY_LABEL, Expense, ExpenseCategory } from '../../domain/finance/Expense';
+import { Expense } from '../../domain/finance/Expense';
 import type { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
 import { ErrorNotice } from '../components/Notice';
@@ -62,10 +62,10 @@ export function BatchProfitScreen() {
           <div className="card">
             <h2>Costs by category</h2>
             <div className="lines">
-              {(Object.keys(p.costsByCategory) as ExpenseCategory[]).map((cat) => (
-                <div key={cat} className="line">
-                  <span className="l">{EXPENSE_CATEGORY_LABEL[cat]}</span>
-                  <span className="r">{uzs(p.costsByCategory[cat] ?? 0)}</span>
+              {Object.entries(p.costsByCategory).map(([label, amount]) => (
+                <div key={label} className="line">
+                  <span className="l">{label}</span>
+                  <span className="r">{uzs(amount)}</span>
                 </div>
               ))}
             </div>

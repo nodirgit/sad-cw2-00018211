@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { ThresholdRange } from '../../domain/environment/ThresholdRange';
 import type { House } from '../../domain/farm/House';
 import { SUPPLIER_TYPE_LABEL, Supplier, SupplierType } from '../../domain/feed/Supplier';
+import type { CustomCategory } from '../../domain/finance/CustomCategory';
+import { EXPENSE_CATEGORY_LABEL, ExpenseCategory } from '../../domain/finance/Expense';
 import { useUser } from '../AppContext';
 import { ErrorNotice, Notice } from '../components/Notice';
 import { MenuRow } from '../components/MenuRow';
@@ -421,6 +423,129 @@ function SupplierRow({ supplier }: { supplier: Supplier }) {
             onEdit={() => { setName(supplier.getName()); setEditing(true); }}
             onDelete={remove}
             confirmText={`Remove ${supplier.getName()} from the supplier list? Past deliveries keep its name.`}
+          />
+        </div>
+      )}
+      <ErrorNotice error={error} />
+    </div>
+  );
+}
+
+/* ---------------- Expense categories (NFR-05) ---------------- */
+
+/** Why a built-in category cannot be changed: other parts of the app use it. */
+const BUILT_IN_NOTE: Record<ExpenseCategory, string> = {
+  [ExpenseCategory.CHICKS]: 'used by the voice helper',
+  [ExpenseCategory.FEED]: 'feed delivery costs go here',
+  [ExpenseCategory.CREW]: "the crew's pay for slaughter goes here",
+  [ExpenseCategory.DRIVER]: 'used by the voice helper',
+  [ExpenseCategory.VET]: 'used by the voice helper',
+  [ExpenseCategory.OTHER]: 'anything the voice helper cannot place',
+};
+
+export function ExpenseCategoriesScreen() {
+  const { c, user, refresh } = useUser();
+  const [name, setName] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const { error, run } = useAction();
+  const own = c.categories.activeCategories();
+
+  function add() {
+    const cat = run(() => c.categories.addCategory(name, user));
+    if (cat) {
+      setMsg(`${cat.getName()} added. It is on the Expenses form now.`);
+      setName('');
+      refresh();
+    }
+  }
+
+  return (
+    <Screen title="Expense categories" subtitle="Settings · NFR-05">
+      <div className="section-title">Your categories</div>
+      <div className="card" style={{ marginTop: 10 }}>
+        {own.length === 0 && (
+          <p className="small muted" style={{ margin: 0 }}>
+            None yet. Add one below, e.g. Electricity or Repairs.
+          </p>
+        )}
+        {own.map((cat) => (
+          <CategoryRow key={cat.getId()} category={cat} />
+        ))}
+      </div>
+
+      <div className="section-title">Add a category</div>
+      <div className="card">
+        <input
+          className="input"
+          style={{ fontSize: 17 }}
+          placeholder="e.g. Electricity"
+          maxLength={30}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          aria-label="Category name"
+        />
+        <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={add} disabled={!name.trim()}>
+          Add category
+        </button>
+        <ErrorNotice error={error} />
+        {msg && !error && <div style={{ marginTop: 10 }}><Notice kind="ok">{msg}</Notice></div>}
+      </div>
+
+      <div className="section-title">Built in</div>
+      <div className="card" style={{ marginTop: 10 }}>
+        {Object.values(ExpenseCategory).map((cat) => (
+          <div key={cat} className="rec">
+            <div className="top">
+              <div className="main">
+                <b>{EXPENSE_CATEGORY_LABEL[cat]}</b>
+                <div className="tiny muted">{BUILT_IN_NOTE[cat]}</div>
+              </div>
+              <span className="chip grey">🔒 fixed</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="tiny muted">
+        Built-in categories cannot be renamed or deleted because other records use them. A deleted category of your own leaves the
+        form; past expenses keep its name.
+      </p>
+    </Screen>
+  );
+}
+
+function CategoryRow({ category }: { category: CustomCategory }) {
+  const { c, user, refresh } = useUser();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(category.getName());
+  const { error, setError, run } = useAction();
+
+  function save() {
+    if (run(() => c.categories.renameCategory(category.getId(), name, user))) {
+      setEditing(false);
+      refresh();
+    }
+  }
+
+  function remove() {
+    if (run(() => (c.categories.removeCategory(category.getId(), user), true))) refresh();
+  }
+
+  return (
+    <div className="rec">
+      {editing ? (
+        <>
+          <input className="input" style={{ fontSize: 17 }} maxLength={30} value={name} onChange={(e) => setName(e.target.value)} aria-label="Category name" />
+          <EditButtons onCancel={() => { setEditing(false); setName(category.getName()); setError(null); }} onSave={save} saveDisabled={!name.trim()} />
+        </>
+      ) : (
+        <div className="top">
+          <div className="main">
+            <b>{category.getName()}</b>
+          </div>
+          <RowActions
+            onEdit={() => { setName(category.getName()); setEditing(true); }}
+            onDelete={remove}
+            confirmText={`Remove "${category.getName()}" from the expense form? Past expenses keep this name.`}
           />
         </div>
       )}

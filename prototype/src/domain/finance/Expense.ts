@@ -1,3 +1,4 @@
+import { CustomCategory } from './CustomCategory';
 import { FinancialEntry } from './FinancialEntry';
 
 export enum ExpenseCategory {
@@ -28,17 +29,40 @@ export enum ExpenseSource {
   CREW_PAY = 'CREW_PAY',
 }
 
-/** Money out, against one batch (FR-03). */
+/**
+ * Money out, against one batch (FR-03). Its category is a built-in one, or one the Director
+ * added (customCategory, aggregation); a custom-category expense is OTHER underneath.
+ */
 export class Expense extends FinancialEntry {
   private readonly category: ExpenseCategory;
   private readonly note: string;
   private readonly source: ExpenseSource;
+  private readonly customCategory: CustomCategory | null;
 
-  constructor(id: string, batchId: string, date: Date, amount: number, category: ExpenseCategory, note = '', source: ExpenseSource = ExpenseSource.MANUAL) {
+  constructor(
+    id: string,
+    batchId: string,
+    date: Date,
+    amount: number,
+    category: ExpenseCategory,
+    note = '',
+    source: ExpenseSource = ExpenseSource.MANUAL,
+    customCategory: CustomCategory | null = null,
+  ) {
     super(id, batchId, date, amount);
-    this.category = category;
+    this.category = customCategory ? ExpenseCategory.OTHER : category;
     this.note = note;
     this.source = source;
+    this.customCategory = customCategory;
+  }
+
+  getCustomCategory(): CustomCategory | null {
+    return this.customCategory;
+  }
+
+  /** The name shown for the category: the Director's own, or the built-in label. */
+  categoryLabel(): string {
+    return this.customCategory ? this.customCategory.getName() : EXPENSE_CATEGORY_LABEL[this.category];
   }
 
   getSource(): ExpenseSource {
@@ -63,6 +87,6 @@ export class Expense extends FinancialEntry {
   }
 
   describe(): string {
-    return this.note ? `${EXPENSE_CATEGORY_LABEL[this.category]} — ${this.note}` : EXPENSE_CATEGORY_LABEL[this.category];
+    return this.note ? `${this.categoryLabel()} — ${this.note}` : this.categoryLabel();
   }
 }

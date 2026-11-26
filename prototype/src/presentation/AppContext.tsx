@@ -18,6 +18,7 @@ export type Route =
   | { name: 'settings-house'; houseId: string }
   | { name: 'settings-house-new' }
   | { name: 'settings-suppliers' }
+  | { name: 'settings-categories' }
   | { name: 'settings-demo' };
 
 /** The sections in the bottom bar. Each one keeps its own stack of screens. */
