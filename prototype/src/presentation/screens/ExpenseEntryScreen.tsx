@@ -3,6 +3,7 @@ import type { Expense } from '../../domain/finance/Expense';
 import { EXPENSE_CATEGORY_LABEL, ExpenseCategory } from '../../domain/finance/Expense';
 import { useUser } from '../AppContext';
 import { HousePicker, useDefaultHouse } from '../components/HousePicker';
+import { PeriodFilter, usePeriod } from '../components/PeriodFilter';
 import { ErrorNotice, Notice } from '../components/Notice';
 import { RowActions } from '../components/RowActions';
 import { Screen } from '../components/Screen';
@@ -156,7 +157,10 @@ export function ExpenseEntryScreen({ editId }: { editId?: string }) {
       </div>
     );
 
-  const recent = c.profit.manualExpenses(user).slice(0, 8);
+  // Only the chosen period is listed (last 7 days at first), not the whole history.
+  const period = usePeriod();
+  const recent = c.profit.manualExpenses(user, period.period);
+  const recentTotal = recent.reduce((sum, e) => sum + e.getAmount(), 0);
 
   return (
     <Screen title={editing ? "Edit expense" : "Expenses"} subtitle="FR-03 · FR-06 · type it, or say it">
@@ -264,8 +268,15 @@ export function ExpenseEntryScreen({ editId }: { editId?: string }) {
 
       <div className="card">
         <h2>Recent expenses</h2>
-        <p className="tiny muted" style={{ marginTop: -4 }}>Feed costs and crew pay are not listed here: they change with their feed delivery or slaughter session.</p>
-        {recent.length === 0 && <p className="small muted">None yet.</p>}
+        <PeriodFilter state={period} />
+        <div className="row">
+          <span className="small muted">
+            {recent.length} {recent.length === 1 ? 'expense' : 'expenses'} in {period.describe}
+          </span>
+          <b className="neg">{uzs(recentTotal)}</b>
+        </div>
+        <p className="tiny muted" style={{ marginTop: 6 }}>Feed costs and crew pay are not listed here: they change with their feed delivery or slaughter session.</p>
+        {recent.length === 0 && <p className="small muted">No expenses in {period.describe}.</p>}
         {recent.map((e) => (
           <div key={e.getId()} className="rec">
             <div className="top">

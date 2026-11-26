@@ -15,6 +15,7 @@ import { RuleBasedVoiceParser } from '../src/infrastructure/voice/RuleBasedVoice
 import { financeSerializer } from '../src/infrastructure/persistence/serializers';
 import { SupplierType } from '../src/domain/feed/Supplier';
 import { SlaughterService } from '../src/application/services/SlaughterService';
+import { DatePeriod } from '../src/domain/DatePeriod';
 import { DomainError } from '../src/domain/DomainError';
 import { Buyer, BuyerGroup } from '../src/domain/finance/Buyer';
 import { Expense, ExpenseCategory } from '../src/domain/finance/Expense';
@@ -228,6 +229,23 @@ describe('NFR-05 suppliers by configuration', () => {
     expect(s.feed.feedSuppliers().map((x) => x.getId())).not.toContain(c.getId());
     expect(delivery.getSupplier().getName()).toBe('Demo Feed Factory C (Navoi)');
     expect(() => s.feed.recordDelivery('house-1', c.getId(), 500, null, worker1)).toThrow('Pick a supplier');
+  });
+});
+
+describe('Lists by time period', () => {
+  it('shows only the expenses of the chosen period (last 7 days by default on screen)', () => {
+    const s = setup();
+    const now = new Date('2026-11-25T14:00:00');
+    const old = s.profit.recordExpense('house-2', ExpenseCategory.VET, 10_000, 'old', new Date('2026-11-01T12:00:00'), director);
+    const fresh = s.profit.recordExpense('house-2', ExpenseCategory.VET, 20_000, 'fresh', new Date('2026-11-19T00:30:00'), director);
+    const week = s.profit.manualExpenses(director, DatePeriod.lastDays(7, now)).map((e) => e.getId());
+    expect(week).toContain(fresh.getId()); // 19 Nov is day 7 of the 7, counted from midnight
+    expect(week).not.toContain(old.getId());
+    expect(s.profit.manualExpenses(director, DatePeriod.lastDays(30, now)).map((e) => e.getId())).toContain(old.getId());
+    expect(s.profit.manualExpenses(director).map((e) => e.getId())).toContain(old.getId());
+    const custom = s.profit.manualExpenses(director, DatePeriod.between(new Date('2026-11-01T12:00:00'), new Date('2026-11-01T12:00:00'))).map((e) => e.getId());
+    expect(custom).toEqual([old.getId()]);
+    expect(() => DatePeriod.between(new Date('2026-11-20'), new Date('2026-11-10'))).toThrow('start date');
   });
 });
 

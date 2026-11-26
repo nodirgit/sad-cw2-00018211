@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 34 unit tests of the business rules (Vitest) |
+| `npm test` | 35 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -48,7 +48,7 @@ After login a **bottom bar** holds the main sections, like a phone app: **Main**
 | Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; the Bazaar agent is picked from the partners (or added); *Record sale* only on MATCH; *Undo sale* if it was recorded by mistake |
 | Sales | FR-03, FR-05 | *Direct sale* and *Bazaar Agent sale* (opens the cross-check), then the latest sales of all buyers with the total |
 | Direct sale | FR-03 | sales to resellers (e.g. the Nurata seller), the shop and clients: the buyer is picked by name from the partners, grouped, or added on the spot with *＋ New partner*; kg, price per kg (prefilled from that buyer's last sale, else the case's price for the group), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
-| Expenses | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
+| Expenses | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses (last 7 days at first; 30 days, all or chosen dates) with count and total, each can be edited or deleted |
 | Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Partners** (everyone we trade with, in groups — we sell to: Bazaar agents, Resellers, Shop, Clients; we buy from: Feed suppliers, Chick suppliers — add, rename, delete), **Expense categories** (the six built-in ones are fixed; add, rename and delete your own, which appear as extra buttons on the Expenses form and in Batch profit), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 

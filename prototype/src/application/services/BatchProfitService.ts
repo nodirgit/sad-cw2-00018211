@@ -1,3 +1,4 @@
+import { DatePeriod } from '../../domain/DatePeriod';
 import { DomainError } from '../../domain/DomainError';
 import { Buyer } from '../../domain/finance/Buyer';
 import { CustomCategory } from '../../domain/finance/CustomCategory';
@@ -85,11 +86,11 @@ export class BatchProfitService {
   }
 
   /** Expenses typed in by hand (Expense entry), newest first. */
-  manualExpenses(user: User): Expense[] {
+  manualExpenses(user: User, period: DatePeriod = DatePeriod.allTime()): Expense[] {
     this.policy.requireDirector(user);
     return this.entries
       .findAll()
-      .filter((e): e is Expense => e instanceof Expense && !e.isLinked())
+      .filter((e): e is Expense => e instanceof Expense && !e.isLinked() && period.contains(e.getDate()))
       .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
   }
 
