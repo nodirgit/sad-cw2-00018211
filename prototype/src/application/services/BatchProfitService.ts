@@ -11,7 +11,10 @@ import { AccessPolicy } from './AccessPolicy';
 import { FarmService } from './FarmService';
 
 export interface BuyerTotal {
-  buyerType: string;
+  buyerId: string;
+  name: string;
+  /** e.g. "Resellers" */
+  group: string;
   kg: number;
   amount: number;
 }
@@ -70,7 +73,7 @@ export class BatchProfitService {
    * A Bazaar Agent sale must come through CrossCheckService (FR-05).
    */
   recordDirectSale(houseId: string, buyer: Buyer, kg: number, pricePerKg: number, date: Date, user: User): Sale {
-    if (buyer.requiresCrossCheck()) throw new DomainError(`${buyer.typeLabel()} sales are recorded from the weight cross-check.`);
+    if (buyer.requiresCrossCheck()) throw new DomainError(`Sales to ${buyer.groupLabel().toLowerCase()} are recorded from the weight cross-check.`);
     return this.recordSaleForBatch(this.farm.openBatch(houseId).getId(), buyer, kg, pricePerKg, date, user);
   }
 
@@ -97,6 +100,11 @@ export class BatchProfitService {
       .findAll()
       .filter((e): e is Sale => e instanceof Sale)
       .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
+  }
+
+  /** The price per kg of the latest sale to this buyer, to prefill the next one; null if none yet. */
+  lastPriceFor(buyerId: string, user: User): number | null {
+    return this.allSales(user).find((s) => s.getBuyer().getId() === buyerId)?.getPricePerKg() ?? null;
   }
 
   /** Sales recorded directly (no cross-check), newest first. */
@@ -179,8 +187,9 @@ export class BatchProfitService {
         const label = e.categoryLabel();
         costsByCategory[label] = (costsByCategory[label] ?? 0) + e.getAmount();
       } else if (e instanceof Sale) {
-        const key = e.getBuyer().typeLabel();
-        const t = byBuyer.get(key) ?? { buyerType: key, kg: 0, amount: 0 };
+        const b = e.getBuyer();
+        const key = b.getId();
+        const t = byBuyer.get(key) ?? { buyerId: key, name: b.getName(), group: b.groupLabel(), kg: 0, amount: 0 };
         t.kg += e.getKg();
         t.amount += e.getAmount();
         byBuyer.set(key, t);

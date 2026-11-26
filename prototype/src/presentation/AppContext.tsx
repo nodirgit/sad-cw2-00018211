@@ -17,7 +17,7 @@ export type Route =
   | { name: 'settings-houses' }
   | { name: 'settings-house'; houseId: string }
   | { name: 'settings-house-new' }
-  | { name: 'settings-suppliers' }
+  | { name: 'settings-partners' }
   | { name: 'settings-categories' }
   | { name: 'settings-demo' };
 

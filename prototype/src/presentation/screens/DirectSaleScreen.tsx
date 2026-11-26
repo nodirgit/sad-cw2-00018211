@@ -1,53 +1,48 @@
 import { useState } from 'react';
-import { Buyer, Client, NurataSeller, ShopCustomer } from '../../domain/finance/Buyer';
+import type { Buyer } from '../../domain/finance/Buyer';
 import type { Sale } from '../../domain/finance/Sale';
 import { useUser } from '../AppContext';
 import { HousePicker, useDefaultHouse } from '../components/HousePicker';
 import { ErrorNotice, Notice } from '../components/Notice';
+import { BuyerPicker, DIRECT_SALE_GROUPS } from '../components/PartnerPicker';
 import { EditButtons, RowActions } from '../components/RowActions';
 import { Screen } from '../components/Screen';
 import { dayMonth, num, parseNumber, toInputDate, uzs } from '../format';
 import { useAction } from '../useAction';
 
-/** Buyers whose sales need no weight cross-check (FR-05 applies only to the Bazaar Agent). */
-const BUYER_TYPES: { label: string; hint: string; make: (name: string) => Buyer }[] = [
-  { label: 'Nurata Seller', hint: 'seller at Nurata', make: (n) => new NurataSeller(n) },
-  { label: 'Shop Customer', hint: "the Director's shop", make: (n) => new ShopCustomer(n) },
-  { label: 'Client', hint: 'small farm order', make: (n) => new Client(n) },
-];
-
 /**
- * FR-03: sales to the Nurata seller, the shop and clients, recorded straight to a batch.
- * Bazaar Agent sales are not here: they go through the weight cross-check (FR-05).
+ * FR-03: sales to the farm's partners (resellers such as the Nurata seller, the shop, clients),
+ * recorded straight to a batch. The buyer is picked by name from the partner list, or added here.
+ * Bazaar agent sales are not here: they go through the weight cross-check (FR-05).
  */
 export function DirectSaleScreen() {
   const { c, user, refresh } = useUser();
+  // Start with the first group (resellers), not just the first name A–Z.
+  const first = DIRECT_SALE_GROUPS.map((g) => c.partners.activeBuyers([g])[0]).find(Boolean);
   const [houseId, setHouseId] = useState(useDefaultHouse());
-  const [type, setType] = useState(BUYER_TYPES[0].label);
-  const [name, setName] = useState('');
+  const [buyerId, setBuyerId] = useState(first?.getId() ?? '');
   const [kg, setKg] = useState('');
-  const [price, setPrice] = useState(String(c.demo.defaults.pricePerKg[BUYER_TYPES[0].label]));
+  const priceFor = (b?: Buyer) => (b ? String(c.profit.lastPriceFor(b.getId(), user) ?? c.demo.defaults.pricePerKg[b.getGroup()]) : '');
+  const [price, setPrice] = useState(priceFor(first));
   const [date, setDate] = useState(toInputDate(new Date()));
   const [saved, setSaved] = useState<string | null>(null);
   const { error, setError, run } = useAction();
 
-  const buyer = BUYER_TYPES.find((b) => b.label === type)!;
+  const buyer = c.partners.findBuyer(buyerId);
   const total = (parseNumber(kg) || 0) * (parseNumber(price) || 0);
 
-  function pickType(label: string) {
-    setType(label);
-    setPrice(String(c.demo.defaults.pricePerKg[label] ?? ''));
+  function pickBuyer(b: Buyer) {
+    setBuyerId(b.getId());
+    setPrice(priceFor(b));
   }
 
   function save() {
+    if (!buyer) return setError('Pick the buyer, or add a new one.');
     if (!(parseNumber(kg) > 0)) return setError('Enter the kg sold.');
-    const sale = run(() =>
-      c.profit.recordDirectSale(houseId, buyer.make(name.trim() || type), parseNumber(kg), parseNumber(price), new Date(`${date}T12:00:00`), user),
-    );
+    const sale = run(() => c.profit.recordDirectSale(houseId, buyer, parseNumber(kg), parseNumber(price), new Date(`${date}T12:00:00`), user));
     if (sale) {
       setSaved(`${sale.describe()} = ${uzs(sale.getAmount())}, added to ${c.farm.houseOfBatch(sale.getBatchId())?.getName()}'s batch.`);
       setKg('');
-      setName('');
       refresh();
     }
   }
@@ -55,22 +50,12 @@ export function DirectSaleScreen() {
   const recent = c.profit.directSales(user).slice(0, 8);
 
   return (
-    <Screen title="Direct sale" subtitle="FR-03 · Nurata seller, shop, clients">
+    <Screen title="Direct sale" subtitle="FR-03 · resellers, shop, clients">
       <div className="card">
         <div className="field">
           <label>Buyer</label>
-          <div className="seg" role="radiogroup" aria-label="Buyer type">
-            {BUYER_TYPES.map((b) => (
-              <button key={b.label} className={type === b.label ? 'on' : ''} onClick={() => pickType(b.label)} role="radio" aria-checked={type === b.label}>
-                {b.label}
-                <small>{b.hint}</small>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="field" style={{ marginTop: 10 }}>
-          <label htmlFor="bname">Buyer name (optional)</label>
-          <input id="bname" className="input" style={{ fontSize: 17 }} placeholder={`e.g. ${type === 'Client' ? 'order of 80 birds' : type}`} value={name} onChange={(e) => setName(e.target.value)} />
+          <BuyerPicker groups={DIRECT_SALE_GROUPS} value={buyerId} onChange={pickBuyer} />
+          {buyer && <span className="hint">{buyer.groupLabel()} · price from {c.profit.lastPriceFor(buyer.getId(), user) !== null ? 'their last sale' : 'the usual rate'}</span>}
         </div>
         <div className="fieldrow" style={{ marginTop: 10 }}>
           <div className="field">
@@ -97,7 +82,7 @@ export function DirectSaleScreen() {
         <button className="btn btn-primary btn-huge" style={{ marginTop: 10 }} onClick={save}>
           Save sale
         </button>
-        <p className="tiny muted" style={{ marginBottom: 0 }}>Bazaar Agent sales are recorded from the agent cross-check (FR-05).</p>
+        <p className="tiny muted" style={{ marginBottom: 0 }}>Bazaar agent sales are recorded from the agent cross-check (FR-05).</p>
       </div>
 
       <ErrorNotice error={error} />
@@ -142,7 +127,7 @@ function SaleRow({ sale, onChanged }: { sale: Sale; onChanged: () => void }) {
         <div className="main">
           {sale.getBuyer().getName()}
           <div className="tiny muted">
-            {sale.getBuyer().typeLabel()} · {dayMonth(sale.getDate())} · {c.farm.houseOfBatch(sale.getBatchId())?.getName() ?? 'removed house'} · {num(sale.getKg(), 1)} kg × {num(sale.getPricePerKg())}
+            {sale.getBuyer().groupLabel()} · {dayMonth(sale.getDate())} · {c.farm.houseOfBatch(sale.getBatchId())?.getName() ?? 'removed house'} · {num(sale.getKg(), 1)} kg × {num(sale.getPricePerKg())}
           </div>
         </div>
         <span className="val pos">{uzs(sale.getAmount())}</span>

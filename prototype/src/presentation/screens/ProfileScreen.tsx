@@ -7,7 +7,8 @@ export function ProfileScreen() {
   const { c, user, go, logout } = useUser();
   const director = c.policy.canSeeMoney(user);
   const houses = c.farm.houses();
-  const suppliers = c.suppliers.activeSuppliers();
+  const buyers = c.partners.activeBuyers().length;
+  const suppliers = c.partners.activeSuppliers().length;
   const ownCategories = c.categories.activeCategories().length;
 
   return (
@@ -30,7 +31,7 @@ export function ProfileScreen() {
           <div className="section-title">Settings · farm</div>
           <div className="menu">
             <MenuRow icon="🏠" title="Houses" detail={`${houses.length} ${houses.length === 1 ? 'house' : 'houses'} · batches · normal ranges`} onClick={() => go({ name: 'settings-houses' })} />
-            <MenuRow icon="🚚" title="Suppliers" detail={`${suppliers.length} chick and feed suppliers`} onClick={() => go({ name: 'settings-suppliers' })} />
+            <MenuRow icon="🤝" title="Partners" detail={`${buyers} we sell to · ${suppliers} we buy from`} onClick={() => go({ name: 'settings-partners' })} />
             <MenuRow
               icon="🏷️"
               title="Expense categories"

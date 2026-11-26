@@ -3,7 +3,7 @@ import { AuthService } from '../application/services/AuthService';
 import { BatchProfitService } from '../application/services/BatchProfitService';
 import { CrossCheckService } from '../application/services/CrossCheckService';
 import { FarmService } from '../application/services/FarmService';
-import { SupplierService } from '../application/services/SupplierService';
+import { PartnerService } from '../application/services/PartnerService';
 import { ExpenseCategoryService } from '../application/services/ExpenseCategoryService';
 import { FeedService } from '../application/services/FeedService';
 import { LightingService } from '../application/services/LightingService';
@@ -14,10 +14,11 @@ import { VoiceEntryService } from '../application/services/VoiceEntryService';
 import { BrowserSpeechRecognizer } from '../infrastructure/devices/BrowserSpeechRecognizer';
 import { SimulatedLightController } from '../infrastructure/devices/SimulatedLightController';
 import { SimulatedSensorProvider } from '../infrastructure/devices/SimulatedSensorProvider';
-import { DEMO_DEFAULTS, DEMO_PINS, DEMO_USERS, DemoSeeder, SENSOR_BASELINES, STORAGE_PREFIX } from '../infrastructure/demo/DemoData';
+import { DEMO_DEFAULTS, DEMO_PINS, DEMO_USERS, DemoSeeder, SENSOR_BASELINES, STORAGE_PREFIX, demoBuyers } from '../infrastructure/demo/DemoData';
 import { InMemoryRepository } from '../infrastructure/persistence/InMemoryRepository';
 import { LocalStorageRepository } from '../infrastructure/persistence/LocalStorageRepository';
 import {
+  buyerSerializer,
   categorySerializer,
   farmSerializer,
   feedSerializer,
@@ -43,11 +44,14 @@ export function buildContainer(storage: Storage = window.localStorage) {
   const deaths = new LocalStorageRepository(key('deaths'), mortalitySerializer(users), storage);
   const feed = new LocalStorageRepository(key('feed'), feedSerializer(suppliers), storage);
   const categories = new LocalStorageRepository(key('categories'), categorySerializer, storage);
-  const finance = new LocalStorageRepository(key('finance'), financeSerializer(categories), storage);
+  const buyers = new LocalStorageRepository(key('buyers'), buyerSerializer, storage);
+  const finance = new LocalStorageRepository(key('finance'), financeSerializer(categories, buyers), storage);
   const sessions = new LocalStorageRepository(key('sessions'), sessionSerializer, storage);
 
   const seeder = new DemoSeeder(storage);
-  seeder.seedIfEmpty({ farms, suppliers, deaths, feed, finance, sessions });
+  seeder.seedIfEmpty({ farms, buyers, suppliers, deaths, feed, finance, sessions });
+  // Data saved before partners existed: give it the demo buyers so the partner list is not empty.
+  if (buyers.findAll().length === 0) demoBuyers().forEach((b) => buyers.save(b));
 
   // Application
   const policy = new AccessPolicy();
@@ -55,7 +59,7 @@ export function buildContainer(storage: Storage = window.localStorage) {
   const farm = new FarmService(farms, policy);
   const mortality = new MortalityService(deaths, farm, policy);
   const profit = new BatchProfitService(finance, farm, policy);
-  const supplierService = new SupplierService(suppliers, policy);
+  const partners = new PartnerService(buyers, suppliers, policy);
   const categoryService = new ExpenseCategoryService(categories, policy);
   const feedService = new FeedService(feed, suppliers, farm, mortality, profit, policy);
   const slaughter = new SlaughterService(sessions, farm, profit, policy);
@@ -69,7 +73,7 @@ export function buildContainer(storage: Storage = window.localStorage) {
     policy,
     farm,
     mortality,
-    suppliers: supplierService,
+    partners,
     categories: categoryService,
     feed: feedService,
     profit,

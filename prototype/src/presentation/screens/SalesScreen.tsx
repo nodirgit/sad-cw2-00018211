@@ -14,7 +14,7 @@ export function SalesScreen() {
     <Screen title="Sales" subtitle="FR-03 · FR-05">
       <div className="section-title">Record a sale</div>
       <div className="menu">
-        <MenuRow icon="🛒" title="Direct sale" detail="Nurata seller · shop · clients" onClick={() => go({ name: 'sale' })} />
+        <MenuRow icon="🛒" title="Direct sale" detail="Resellers · shop · clients" onClick={() => go({ name: 'sale' })} />
         <MenuRow
           icon="⚖️"
           title="Bazaar Agent sale"
@@ -37,7 +37,7 @@ export function SalesScreen() {
               <div className="main">
                 {s.getBuyer().getName()}
                 <div className="tiny muted">
-                  {s.getBuyer().typeLabel()} · {dayMonth(s.getDate())} · {c.farm.houseOfBatch(s.getBatchId())?.getName() ?? 'removed house'} · {num(s.getKg(), 1)} kg × {num(s.getPricePerKg())}
+                  {s.getBuyer().groupLabel()} · {dayMonth(s.getDate())} · {c.farm.houseOfBatch(s.getBatchId())?.getName() ?? 'removed house'} · {num(s.getKg(), 1)} kg × {num(s.getPricePerKg())}
                 </div>
               </div>
               <span className="val pos">{uzs(s.getAmount())}</span>

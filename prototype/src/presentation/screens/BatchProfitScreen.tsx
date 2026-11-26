@@ -76,10 +76,12 @@ export function BatchProfitScreen() {
             {p.salesByBuyer.length === 0 && <p className="muted small">No sales yet in this batch.</p>}
             <div className="lines">
               {p.salesByBuyer.map((s) => (
-                <div key={s.buyerType} className="line">
+                <div key={s.buyerId} className="line">
                   <span className="l">
-                    {s.buyerType}
-                    <div className="tiny muted">{num(s.kg)} kg</div>
+                    {s.name}
+                    <div className="tiny muted">
+                      {s.group} · {num(s.kg)} kg
+                    </div>
                   </span>
                   <span className="r">{uzs(s.amount)}</span>
                 </div>

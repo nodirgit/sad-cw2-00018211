@@ -8,7 +8,7 @@ import { House } from '../../domain/farm/House';
 import { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
-import { BazaarAgent, Buyer, Client, NurataSeller, ShopCustomer } from '../../domain/finance/Buyer';
+import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
 import { CustomCategory } from '../../domain/finance/CustomCategory';
 import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
@@ -100,17 +100,28 @@ export function feedSerializer(suppliers: Repository<Supplier>): Serializer<Feed
   };
 }
 
-const BUYER_TYPES: Record<string, (name: string) => Buyer> = {
-  'Bazaar Agent': (n) => new BazaarAgent(n),
-  'Nurata Seller': (n) => new NurataSeller(n),
-  'Shop Customer': (n) => new ShopCustomer(n),
-  Client: (n) => new Client(n),
+export const buyerSerializer: Serializer<Buyer> = {
+  toRecord: (b) => ({ id: b.getId(), name: b.getName(), group: b.getGroup(), active: b.isActive() }),
+  fromRecord: (r) => new Buyer(r.id, r.name, r.group as BuyerGroup, r.active !== false),
 };
 
-export function buyerFrom(type: string, name: string): Buyer {
-  const make = BUYER_TYPES[type];
-  if (!make) throw new DomainError(`Unknown buyer type ${type}`);
-  return make(name);
+/** Sales saved before partners existed named a buyer type instead of a group. */
+const LEGACY_BUYER_TYPE: Record<string, BuyerGroup> = {
+  'Bazaar Agent': BuyerGroup.BAZAAR_AGENT,
+  'Nurata Seller': BuyerGroup.RESELLER,
+  'Shop Customer': BuyerGroup.SHOP,
+  Client: BuyerGroup.CLIENT,
+};
+
+/**
+ * The sale's buyer from the partner list; if it is not there (a sale saved before partners
+ * existed), a stand-in from the name and group stored with the sale, so the app never breaks.
+ */
+function saleBuyer(buyers: Repository<Buyer>, r: any): Buyer {
+  const found = r.buyerId ? buyers.findById(r.buyerId) : buyers.findAll().find((b) => b.getName() === r.buyerName);
+  if (found) return found;
+  const group = (r.buyerGroup as BuyerGroup) ?? LEGACY_BUYER_TYPE[r.buyerType] ?? BuyerGroup.CLIENT;
+  return new Buyer(r.buyerId ?? `legacy-${r.id}`, r.buyerName || 'Buyer', group, false);
 }
 
 /** Records saved before ExpenseSource existed: the id tells where they came from. */
@@ -120,17 +131,20 @@ function legacySource(id: string): ExpenseSource {
   return ExpenseSource.MANUAL;
 }
 
-export function financeSerializer(categories: Repository<CustomCategory>): Serializer<FinancialEntry> {
+export function financeSerializer(categories: Repository<CustomCategory>, buyers: Repository<Buyer>): Serializer<FinancialEntry> {
   return {
     toRecord: (e) => {
       const base = { id: e.getId(), batchId: e.getBatchId(), date: e.getDate().toISOString(), amount: e.getAmount() };
       if (e instanceof Expense)
         return { ...base, kind: 'expense', category: e.getCategory(), note: e.getNote(), source: e.getSource(), customCategoryId: e.getCustomCategory()?.getId() ?? null };
-      if (e instanceof Sale) return { ...base, kind: 'sale', buyerType: e.getBuyer().typeLabel(), buyerName: e.getBuyer().getName(), kg: e.getKg(), pricePerKg: e.getPricePerKg() };
+      if (e instanceof Sale) {
+        const b = e.getBuyer();
+        return { ...base, kind: 'sale', buyerId: b.getId(), buyerName: b.getName(), buyerGroup: b.getGroup(), kg: e.getKg(), pricePerKg: e.getPricePerKg() };
+      }
       throw new DomainError('Unknown financial entry');
     },
     fromRecord: (r) => {
-      if (r.kind === 'sale') return new Sale(r.id, r.batchId, d(r.date), buyerFrom(r.buyerType, r.buyerName), r.kg, r.pricePerKg);
+      if (r.kind === 'sale') return new Sale(r.id, r.batchId, d(r.date), saleBuyer(buyers, r), r.kg, r.pricePerKg);
       // A category is archived, never erased; if one is missing anyway the expense shows as Other instead of breaking the app.
       const custom = r.customCategoryId ? (categories.findById(r.customCategoryId) ?? null) : null;
       return new Expense(r.id, r.batchId, d(r.date), r.amount, r.category as ExpenseCategory, r.note, (r.source as ExpenseSource) ?? legacySource(r.id), custom);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { BazaarAgent } from '../../domain/finance/Buyer';
+import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
+import { BuyerPicker } from '../components/PartnerPicker';
 import { SESSION_KIND_LABEL } from '../../domain/slaughter/SlaughterSession';
 import { CrossCheckStatus } from '../../domain/slaughter/WeightTally';
 import { useUser } from '../AppContext';
@@ -22,7 +23,10 @@ export function CrossCheckScreen({ sessionId }: { sessionId?: string }) {
   const [selectedId, setSelectedId] = useState(sessionId ?? firstOpen?.getId() ?? '');
   const [agent, setAgent] = useState('');
   const [rep, setRep] = useState('');
-  const [price, setPrice] = useState(String(c.demo.defaults.pricePerKg['Bazaar Agent']));
+  const firstAgent = c.partners.activeBuyers([BuyerGroup.BAZAAR_AGENT])[0];
+  const priceFor = (b?: Buyer) => String((b && c.profit.lastPriceFor(b.getId(), user)) ?? c.demo.defaults.pricePerKg[BuyerGroup.BAZAAR_AGENT]);
+  const [agentId, setAgentId] = useState(firstAgent?.getId() ?? '');
+  const [price, setPrice] = useState(priceFor(firstAgent));
   const [sold, setSold] = useState<string | null>(null);
   const { error, run } = useAction();
 
@@ -61,7 +65,11 @@ export function CrossCheckScreen({ sessionId }: { sessionId?: string }) {
   }
 
   function recordSale() {
-    const sale = run(() => c.crossCheck.recordSale(session!.getId(), new BazaarAgent('Bazaar Agent (Navoi bazaar)'), parseNumber(price), user));
+    const buyer = c.partners.findBuyer(agentId);
+    const sale = run(() => {
+      if (!buyer) throw new Error('Pick the Bazaar agent, or add one.');
+      return c.crossCheck.recordSale(session!.getId(), buyer, parseNumber(price), user);
+    });
     if (sale) {
       setSold(`${num(sale.getKg())} kg × ${num(sale.getPricePerKg())} = ${uzs(sale.getAmount())} added to ${houseName}'s batch.`);
       refresh();
@@ -125,6 +133,17 @@ export function CrossCheckScreen({ sessionId }: { sessionId?: string }) {
           </>
         ) : (
           <>
+            <div className="field">
+              <label>Bazaar agent</label>
+              <BuyerPicker
+                groups={[BuyerGroup.BAZAAR_AGENT]}
+                value={agentId}
+                onChange={(b) => {
+                  setAgentId(b.getId());
+                  setPrice(priceFor(b));
+                }}
+              />
+            </div>
             <div className="field">
               <label htmlFor="price">Today's bazaar rate (UZS per kg)</label>
               <input id="price" className="input" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} />

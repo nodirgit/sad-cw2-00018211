@@ -2,7 +2,7 @@ import { DomainError } from '../DomainError';
 import { Buyer } from './Buyer';
 import { FinancialEntry } from './FinancialEntry';
 
-/** Money in, against one batch (FR-03). Association: the Buyer it was sold to. */
+/** Money in, against one batch (FR-03). Association: the Buyer (a partner) it was sold to. */
 export class Sale extends FinancialEntry {
   private readonly buyer: Buyer;
   private readonly kg: number;
@@ -33,6 +33,6 @@ export class Sale extends FinancialEntry {
   }
 
   describe(): string {
-    return `${this.buyer.typeLabel()} — ${this.kg.toLocaleString('en-US')} kg × ${this.pricePerKg.toLocaleString('en-US')}`;
+    return `${this.buyer.getName()} — ${this.kg.toLocaleString('en-US')} kg × ${this.pricePerKg.toLocaleString('en-US')}`;
   }
 }

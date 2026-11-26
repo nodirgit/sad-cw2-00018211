@@ -8,7 +8,7 @@ import { House } from '../../domain/farm/House';
 import { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
-import { BazaarAgent, Client, ShopCustomer } from '../../domain/finance/Buyer';
+import { Buyer, BuyerGroup } from '../../domain/finance/Buyer';
 import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
@@ -41,13 +41,13 @@ export const DEMO_PINS = 'Director 1234 · Worker 1 1111 · Worker 2 2222';
 export interface DemoDefaults {
   /** demo: the real crew rate per head is not known */
   crewRatePerHead: number;
-  /** Farm Facts: ~26,000 / ~27,000 / ~28,000 UZS/kg; Client price is a demo value */
-  pricePerKg: Record<string, number>;
+  /** Farm Facts: Bazaar agent ~26,000 / Nurata seller ~27,000 / shop ~28,000 UZS/kg; the client price is a demo value */
+  pricePerKg: Record<BuyerGroup, number>;
 }
 
 export const DEMO_DEFAULTS: DemoDefaults = {
   crewRatePerHead: 1000,
-  pricePerKg: { 'Bazaar Agent': 26000, 'Nurata Seller': 27000, 'Shop Customer': 28000, Client: 27000 },
+  pricePerKg: { [BuyerGroup.BAZAAR_AGENT]: 26000, [BuyerGroup.RESELLER]: 27000, [BuyerGroup.SHOP]: 28000, [BuyerGroup.CLIENT]: 27000 },
 };
 
 /** Simulated sensor baselines: House 2 runs hot on purpose so the FR-07 alert shows. */
@@ -56,8 +56,19 @@ export const SENSOR_BASELINES: Record<string, Baseline> = {
   'house-2': { temperatureC: 32.8, humidityPct: 60 },
 };
 
+/** Buyers from Farm Facts (the bazaar agent, the Nurata seller, the shop) plus one demo client. */
+export function demoBuyers(): Buyer[] {
+  return [
+    new Buyer('buyer-agent', 'Bazaar Agent (Navoi bazaar)', BuyerGroup.BAZAAR_AGENT),
+    new Buyer('buyer-nurata', 'Nurata seller', BuyerGroup.RESELLER),
+    new Buyer('buyer-shop', "Shop at the Director's house", BuyerGroup.SHOP),
+    new Buyer('buyer-client-1', 'Demo client (80 birds)', BuyerGroup.CLIENT),
+  ];
+}
+
 export interface DemoRepositories {
   farms: Repository<Farm>;
+  buyers: Repository<Buyer>;
   suppliers: Repository<Supplier>;
   deaths: Repository<MortalityRecord>;
   feed: Repository<FeedDelivery>;
@@ -163,8 +174,10 @@ export class DemoSeeder {
     }
 
     const p = DEMO_DEFAULTS.pricePerKg;
-    repos.finance.save(new Sale('sale-demo-1', 'batch-h1', daysAgo(1, 10), new BazaarAgent('Bazaar Agent (Navoi bazaar)'), 2640, p['Bazaar Agent']));
-    repos.finance.save(new Sale('sale-demo-2', 'batch-h1', daysAgo(1, 15), new ShopCustomer("Shop at the Director's house"), 120, p['Shop Customer']));
-    repos.finance.save(new Sale('sale-demo-3', 'batch-h1', daysAgo(5, 12), new Client('Client order, 80 birds'), 176, p.Client));
+    const [agent, , shop, client] = demoBuyers();
+    demoBuyers().forEach((b) => repos.buyers.save(b));
+    repos.finance.save(new Sale('sale-demo-1', 'batch-h1', daysAgo(1, 10), agent, 2640, p[BuyerGroup.BAZAAR_AGENT]));
+    repos.finance.save(new Sale('sale-demo-2', 'batch-h1', daysAgo(1, 15), shop, 120, p[BuyerGroup.SHOP]));
+    repos.finance.save(new Sale('sale-demo-3', 'batch-h1', daysAgo(5, 12), client, 176, p[BuyerGroup.CLIENT]));
   }
 }

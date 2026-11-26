@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 31 unit tests of the business rules (Vitest) |
+| `npm test` | 34 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -38,18 +38,18 @@ After login a **bottom bar** holds the main sections, like a phone app: **Main**
 
 | Screen | Requirement | What it shows |
 |---|---|---|
-| Login | NFR-03 | user + 4-digit PIN |
+| Login | NFR-03 | a 4-digit PIN only: the PIN says who is logging in |
 | Main (Director) | FR-07, FR-08, NFR-01 | one card per house: batch day, chicks, deaths today / in batch, live temperature and humidity with an alert outside the house's range, light switch; tiles *Log death*, *Feed delivery*, *Batch profit* |
 | Main (Worker) | NFR-03 | the same house cards, only *Log death* and *Feed delivery*, no money anywhere |
 | Log death | FR-01, NFR-02 | house + count + Save; the same count in the same house within 2 minutes is flagged **possible duplicate** and not counted twice, with "it was a different bird — count it"; latest entries can be corrected or deleted |
-| Feed delivery | FR-02, NFR-03 | supplier → house → that house's open batch; feed per bird for the batch; the cost field only for the Director, and it becomes a batch cost; deliveries can be corrected or deleted |
-| Batch profit | FR-03 | per house: running profit, costs by category, sales by buyer, entries — each batch on its own; manual expenses and direct sales can be edited or deleted here, linked entries say where they are changed |
+| Feed delivery | FR-02, NFR-03 | supplier (picked from the partners, or *＋ New feed supplier* for the Director) → house → that house's open batch; feed per bird for the batch; the cost field only for the Director, and it becomes a batch cost; deliveries can be corrected or deleted |
+| Batch profit | FR-03 | per house: running profit, costs by category, sales by buyer (name and group), entries — each batch on its own; manual expenses and direct sales can be edited or deleted here, linked entries say where they are changed |
 | Slaughter session | FR-04, NFR-04 | head count + rate → crew payment shown at once; "Correct count" needs a note and keeps the history; an empty session can be deleted |
-| Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; *Record sale* only on MATCH; *Undo sale* if it was recorded by mistake |
+| Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; the Bazaar agent is picked from the partners (or added); *Record sale* only on MATCH; *Undo sale* if it was recorded by mistake |
 | Sales | FR-03, FR-05 | *Direct sale* and *Bazaar Agent sale* (opens the cross-check), then the latest sales of all buyers with the total |
-| Direct sale | FR-03 | sales to the Nurata seller, the shop and clients: buyer, kg, price per kg (prefilled from the case's prices), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
+| Direct sale | FR-03 | sales to resellers (e.g. the Nurata seller), the shop and clients: the buyer is picked by name from the partners, grouped, or added on the spot with *＋ New partner*; kg, price per kg (prefilled from that buyer's last sale, else the case's price for the group), date, house → total, saved to that house's batch; recent direct sales can be edited or deleted. Bazaar Agent sales stay on the cross-check (FR-05) |
 | Expenses | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
-| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Expense categories** (the six built-in ones are fixed; add, rename and delete your own, which appear as extra buttons on the Expenses form and in Batch profit), **Demo data** (what is invented, reset) |
+| Profile | NFR-03, FR-07, NFR-05 | the logged-in user and role, **Log out**; for the Director the settings, grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Partners** (everyone we trade with, in groups — we sell to: Bazaar agents, Resellers, Shop, Clients; we buy from: Feed suppliers, Chick suppliers — add, rename, delete), **Expense categories** (the six built-in ones are fixed; add, rename and delete your own, which appear as extra buttons on the Expenses form and in Batch profit), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 
 Screenshots of every screen are in [`screenshots/`](screenshots).
@@ -63,12 +63,12 @@ Every record a person enters can be corrected or deleted, unless another record 
 | Death | count | yes | the person who logged it, or the Director; only while the batch is open |
 | Feed delivery | supplier, kg, cost | yes | a Worker only for deliveries without a cost (NFR-03); the FEED expense follows the cost |
 | Expense typed in | all fields | yes | Director; feed costs and crew pay are changed with their delivery / session |
-| Direct sale (shop, Nurata seller, client) | kg, price per kg | yes | Director |
+| Direct sale (reseller, shop, client) | kg, price per kg | yes | Director |
 | Bazaar Agent sale | — | *Undo sale* on the cross-check | then the weights can be corrected and the sale recorded again (FR-05) |
 | Slaughter session | head count by *correction with a note* | only while empty | a counted session is the crew's pay record (NFR-04) |
 | House | name, capacity | when no open batch | capacity never below the chicks placed; at least one house |
 | Batch | chicks placed, start date; close / reopen | — | its records hang on it |
-| Supplier | name | yes (archived) | past deliveries keep the name |
+| Partner (buyer or supplier) | name | yes (archived) | past sales and deliveries keep the name |
 | Expense category (your own) | name | yes (archived) | past expenses keep the name; the six built-in categories are fixed (feed deliveries, crew pay and the voice helper use them) |
 
 ## What is simulated or demo
@@ -92,13 +92,14 @@ src/
   application/
     ports/           interfaces: Repository<T>, VoiceParser, SensorProvider, LightController, SpeechRecognizer
     services/        one responsibility each (SRP): AuthService, AccessPolicy, FarmService, MortalityService,
-                     FeedService, SupplierService, ExpenseCategoryService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
+                     FeedService, PartnerService, ExpenseCategoryService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
                      MonitoringService, LightingService
   domain/            entities, value objects, enums, abstract classes — no React, no storage
     people/          User (abstract), Director, Worker
     farm/            Farm ◆ House ◆ Batch, BatchStatus, MortalityRecord
+    partners/        Partner (abstract) ← Buyer, Supplier
     feed/            Supplier, SupplierType, FeedDelivery
-    finance/         FinancialEntry (abstract), Expense, Sale, ExpenseCategory, Buyer (abstract) + 4 buyer types
+    finance/         FinancialEntry (abstract), Expense, Sale, ExpenseCategory, CustomCategory, Buyer, BuyerGroup
     slaughter/       SlaughterSession ◆ HeadCountRecord ◆ HeadCountCorrection, WeightTally, SessionKind, CrossCheckStatus
     environment/     SensorReading, ThresholdRange
     voice/           ParsedEntry, ParsedField
@@ -120,4 +121,5 @@ Design principles used (Lecture 10):
 - **Polymorphism:**
   - `FinancialEntry.signedAmount()`: Expense is negative and Sale positive, so profit is one sum;
   - `User.canViewFinancials()`: only the Director sees money;
-  - `Buyer.requiresCrossCheck()`: only the Bazaar Agent's sales are cross-checked.
+  - `Partner.groupLabel()`: a Buyer and a Supplier each name their own group;
+  - `Buyer.requiresCrossCheck()`: only a Bazaar agent's sales are cross-checked (by its group).

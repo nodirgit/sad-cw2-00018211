@@ -8,7 +8,7 @@ import { FeedService } from '../src/application/services/FeedService';
 import { LightingService } from '../src/application/services/LightingService';
 import { MonitoringService } from '../src/application/services/MonitoringService';
 import { MortalityService } from '../src/application/services/MortalityService';
-import { SupplierService } from '../src/application/services/SupplierService';
+import { PartnerService } from '../src/application/services/PartnerService';
 import { ExpenseCategoryService } from '../src/application/services/ExpenseCategoryService';
 import { VoiceEntryService } from '../src/application/services/VoiceEntryService';
 import { RuleBasedVoiceParser } from '../src/infrastructure/voice/RuleBasedVoiceParser';
@@ -16,7 +16,7 @@ import { financeSerializer } from '../src/infrastructure/persistence/serializers
 import { SupplierType } from '../src/domain/feed/Supplier';
 import { SlaughterService } from '../src/application/services/SlaughterService';
 import { DomainError } from '../src/domain/DomainError';
-import { BazaarAgent, NurataSeller } from '../src/domain/finance/Buyer';
+import { Buyer, BuyerGroup } from '../src/domain/finance/Buyer';
 import { Expense, ExpenseCategory } from '../src/domain/finance/Expense';
 import { SessionKind } from '../src/domain/slaughter/SlaughterSession';
 import { CrossCheckStatus } from '../src/domain/slaughter/WeightTally';
@@ -26,11 +26,14 @@ import { DEMO_USERS, DemoSeeder, SENSOR_BASELINES } from '../src/infrastructure/
 import { InMemoryRepository } from '../src/infrastructure/persistence/InMemoryRepository';
 
 const [director, worker1, worker2] = DEMO_USERS;
+const agent = (name: string) => new Buyer(`b-${name}`, name, BuyerGroup.BAZAAR_AGENT);
+const reseller = (name: string) => new Buyer(`b-${name}`, name, BuyerGroup.RESELLER);
 
 /** Same wiring as the app's container, but with in-memory repositories (DIP in action). */
 function setup(now = new Date('2026-11-25T14:00:00')) {
   const repos = {
     farms: new InMemoryRepository<any>(),
+    buyers: new InMemoryRepository<any>(),
     suppliers: new InMemoryRepository<any>(),
     deaths: new InMemoryRepository<any>(),
     feed: new InMemoryRepository<any>(),
@@ -117,8 +120,8 @@ describe('FR-03 per-batch profit', () => {
 
   it('sends Bazaar Agent sales through the cross-check', () => {
     const s = setup();
-    expect(() => s.profit.recordDirectSale('house-1', new BazaarAgent('x'), 10, 26000, new Date(), director)).toThrow(DomainError);
-    expect(s.profit.recordDirectSale('house-1', new NurataSeller('y'), 10, 27000, new Date(), director).getAmount()).toBe(270000);
+    expect(() => s.profit.recordDirectSale('house-1', agent('x'), 10, 26000, new Date(), director)).toThrow(DomainError);
+    expect(s.profit.recordDirectSale('house-1', reseller('y'), 10, 27000, new Date(), director).getAmount()).toBe(270000);
   });
 });
 
@@ -143,18 +146,18 @@ describe('FR-05 cross-check', () => {
   it('stays pending with one figure and refuses the sale', () => {
     const s = setup();
     expect(s.crossCheck.status('session-demo-2')).toBe(CrossCheckStatus.PENDING);
-    expect(() => s.crossCheck.recordSale('session-demo-2', new BazaarAgent('a'), 26000, director)).toThrow('second figure');
+    expect(() => s.crossCheck.recordSale('session-demo-2', agent('a'), 26000, director)).toThrow('second figure');
   });
 
   it('refuses on mismatch and records the sale on match', () => {
     const s = setup();
     expect(s.crossCheck.enterRepresentativeKg('session-demo-2', 2500, director)).toBe(CrossCheckStatus.MISMATCH);
-    expect(() => s.crossCheck.recordSale('session-demo-2', new BazaarAgent('a'), 26000, director)).toThrow('differ by 30');
+    expect(() => s.crossCheck.recordSale('session-demo-2', agent('a'), 26000, director)).toThrow('differ by 30');
     expect(s.crossCheck.enterRepresentativeKg('session-demo-2', 2530, director)).toBe(CrossCheckStatus.MATCH);
-    const sale = s.crossCheck.recordSale('session-demo-2', new BazaarAgent('a'), 26000, director);
+    const sale = s.crossCheck.recordSale('session-demo-2', agent('a'), 26000, director);
     expect(sale.getAmount()).toBe(2530 * 26000);
     expect(sale.getBatchId()).toBe('batch-h1');
-    expect(() => s.crossCheck.recordSale('session-demo-2', new BazaarAgent('a'), 26000, director)).toThrow('already');
+    expect(() => s.crossCheck.recordSale('session-demo-2', agent('a'), 26000, director)).toThrow('already');
   });
 });
 
@@ -212,19 +215,48 @@ describe('NFR-05 houses by configuration', () => {
 describe('NFR-05 suppliers by configuration', () => {
   it('adds, renames and removes suppliers; past deliveries keep the name', () => {
     const s = setup();
-    const suppliers = new SupplierService(s.repos.suppliers, new AccessPolicy());
+    const suppliers = new PartnerService(s.repos.buyers, s.repos.suppliers, new AccessPolicy());
     const c = suppliers.addSupplier('Demo Feed Factory C', SupplierType.FEED, director);
     expect(s.feed.feedSuppliers().map((x) => x.getName())).toContain('Demo Feed Factory C');
-    expect(() => suppliers.addSupplier('demo feed factory a', SupplierType.FEED, director)).toThrow('already a supplier');
+    expect(() => suppliers.addSupplier('demo feed factory a', SupplierType.FEED, director)).toThrow('already a partner');
     expect(() => suppliers.addSupplier('X', SupplierType.FEED, worker1)).toThrow('Only the Director');
 
-    suppliers.renameSupplier(c.getId(), 'Demo Feed Factory C (Navoi)', director);
+    suppliers.renamePartner(c.getId(), 'Demo Feed Factory C (Navoi)', director);
     const { delivery } = s.feed.recordDelivery('house-1', c.getId(), 1000, null, worker1);
-    suppliers.removeSupplier(c.getId(), director);
+    suppliers.removePartner(c.getId(), director);
 
     expect(s.feed.feedSuppliers().map((x) => x.getId())).not.toContain(c.getId());
     expect(delivery.getSupplier().getName()).toBe('Demo Feed Factory C (Navoi)');
     expect(() => s.feed.recordDelivery('house-1', c.getId(), 500, null, worker1)).toThrow('Pick a supplier');
+  });
+});
+
+describe('NFR-05 partners (who we sell to and buy from)', () => {
+  it('buyers and suppliers share one list with groups; names are unique; removed partners keep their sales', () => {
+    const s = setup();
+    const partners = new PartnerService(s.repos.buyers, s.repos.suppliers, new AccessPolicy());
+    expect(partners.activeBuyers().map((b) => b.groupLabel())).toEqual(expect.arrayContaining(['Bazaar agents', 'Resellers', 'Shop', 'Clients']));
+    const stall = partners.addBuyer('Navoi stall 4', BuyerGroup.RESELLER, director);
+    expect(partners.activePartners().map((p) => p.getName())).toEqual(expect.arrayContaining(['Navoi stall 4', 'Demo Feed Factory A']));
+    expect(() => partners.addSupplier('navoi stall 4', SupplierType.FEED, director)).toThrow('already a partner');
+    expect(() => partners.addBuyer('X', BuyerGroup.CLIENT, worker1)).toThrow('Only the Director');
+    const sale = s.profit.recordDirectSale('house-2', stall, 100, 27500, new Date(), director);
+    expect(sale.describe()).toContain('Navoi stall 4');
+    expect(s.profit.lastPriceFor(stall.getId(), director)).toBe(27500);
+    partners.removePartner(stall.getId(), director);
+    expect(partners.activeBuyers().map((b) => b.getId())).not.toContain(stall.getId());
+    expect(partners.findBuyer(stall.getId())?.getName()).toBe('Navoi stall 4');
+    const byBuyer = s.profit.profitFor('batch-h2', director).salesByBuyer;
+    expect(byBuyer.find((b) => b.buyerId === stall.getId())?.group).toBe('Resellers');
+  });
+
+  it('only a Bazaar agent needs the cross-check (FR-05), and old sales without a partner still load', () => {
+    expect(agent('a').requiresCrossCheck()).toBe(true);
+    expect(reseller('r').requiresCrossCheck()).toBe(false);
+    const legacy = { id: 'sale-old', kind: 'sale', batchId: 'batch-h1', date: new Date().toISOString(), amount: 1, buyerType: 'Nurata Seller', buyerName: 'Old seller', kg: 10, pricePerKg: 27000 };
+    const sale = financeSerializer(new InMemoryRepository<any>(), new InMemoryRepository<any>()).fromRecord(legacy) as any;
+    expect(sale.getBuyer().getName()).toBe('Old seller');
+    expect(sale.getBuyer().groupLabel()).toBe('Resellers');
   });
 });
 
@@ -256,11 +288,11 @@ describe('NFR-05 expense categories by configuration', () => {
     cats.removeCategory(repairs.getId(), director);
     expect(s.profit.profitFor('batch-h2', director).costsByCategory['Repairs']).toBe(300_000);
     // saved and loaded again: the expense finds its category by id
-    const ser = financeSerializer(catRepo);
+    const ser = financeSerializer(catRepo, new InMemoryRepository<any>());
     const loaded = ser.fromRecord(JSON.parse(JSON.stringify(ser.toRecord(e)))) as Expense;
     expect(loaded.categoryLabel()).toBe('Repairs');
     // a missing category falls back to Other instead of breaking
-    const orphan = financeSerializer(new InMemoryRepository<any>()).fromRecord(JSON.parse(JSON.stringify(ser.toRecord(e)))) as Expense;
+    const orphan = financeSerializer(new InMemoryRepository<any>(), new InMemoryRepository<any>()).fromRecord(JSON.parse(JSON.stringify(ser.toRecord(e)))) as Expense;
     expect(orphan.categoryLabel()).toBe('Other');
     // and it can be moved back to a built-in category
     const moved = s.profit.editExpense(e.getId(), ExpenseCategory.VET, 300_000, 'fan motor', new Date(), director);
@@ -337,7 +369,7 @@ describe('Editing and deleting records', () => {
 
   it('direct sales can be corrected or deleted; Bazaar Agent sales only through the cross-check', () => {
     const s = setup();
-    const sale = s.profit.recordDirectSale('house-1', new NurataSeller('n'), 100, 27000, new Date(), director);
+    const sale = s.profit.recordDirectSale('house-1', reseller('n'), 100, 27000, new Date(), director);
     s.profit.editDirectSale(sale.getId(), 110, 27000, director);
     expect(s.profit.profitFor('batch-h1', director).entries.find((e) => e.getId() === sale.getId())?.getAmount()).toBe(110 * 27000);
     s.profit.deleteEntry(sale.getId(), director);
@@ -347,7 +379,7 @@ describe('Editing and deleting records', () => {
 
   it('lists all sales, and direct sales (shop, Nurata seller, client) without Bazaar Agent sales', () => {
     const s = setup();
-    const sale = s.profit.recordDirectSale('house-2', new NurataSeller('Nurata market'), 150, 27000, new Date(), director);
+    const sale = s.profit.recordDirectSale('house-2', reseller('Nurata market'), 150, 27000, new Date(), director);
     const list = s.profit.directSales(director);
     expect(list.map((x) => x.getId())).toContain(sale.getId());
     expect(list.every((x) => !x.getBuyer().requiresCrossCheck())).toBe(true);
@@ -356,6 +388,6 @@ describe('Editing and deleting records', () => {
     expect(all).toContain('sale-demo-1');
     expect(sale.getBatchId()).toBe('batch-h2');
     expect(() => s.profit.directSales(worker1)).toThrow('Only the Director');
-    expect(() => s.profit.recordDirectSale('house-2', new BazaarAgent('a'), 10, 26000, new Date(), director)).toThrow('cross-check');
+    expect(() => s.profit.recordDirectSale('house-2', agent('a'), 10, 26000, new Date(), director)).toThrow('cross-check');
   });
 });

@@ -3,6 +3,7 @@ import type { FeedDeliveryResult } from '../../application/services/FeedService'
 import type { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { useUser } from '../AppContext';
 import { HousePicker, useDefaultHouse } from '../components/HousePicker';
+import { AddPartnerInline, BUY_GROUPS } from '../components/PartnerPicker';
 import { ErrorNotice, Notice } from '../components/Notice';
 import { EditButtons, RowActions } from '../components/RowActions';
 import { Screen } from '../components/Screen';
@@ -51,7 +52,7 @@ export function FeedDeliveryScreen({ houseId: initial }: { houseId?: string }) {
 
       <div className="field">
         <label>Supplier</label>
-        {suppliers.length === 0 && <span className="hint">No feed suppliers. The Director adds them in Settings.</span>}
+        {suppliers.length === 0 && <span className="hint">No feed suppliers yet. The Director adds them here or in Profile → Partners.</span>}
         <div className="list-pick">
           {suppliers.map((s) => (
             <div key={s.getId()} className="seg">
@@ -61,6 +62,7 @@ export function FeedDeliveryScreen({ houseId: initial }: { houseId?: string }) {
             </div>
           ))}
         </div>
+        <AddPartnerInline options={BUY_GROUPS.slice(0, 1)} label="＋ New feed supplier" onAdded={(p) => setSupplierId(p.getId())} />
       </div>
 
       <div className="field">

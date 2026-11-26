@@ -31,9 +31,11 @@ let n = 0;
 async function shot(name, fullPage = false) {
   n += 1;
   const file = path.join(out, `${String(n).padStart(2, '0')}-${name}.png`);
-  if (fullPage) await page.evaluate(() => window.scrollTo(0, 0));
+  // A full-page shot would draw the sticky bottom bar mid-page: put it at the end of the page instead.
+  if (fullPage) await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector('.tabbar')?.style.setProperty('position', 'static'); });
   await pause(300);
   await page.screenshot({ path: file, fullPage });
+  if (fullPage) await page.evaluate(() => document.querySelector('.tabbar')?.style.removeProperty('position'));
   console.log('saved', path.basename(file));
 }
 async function click(text, nth = 0) {
@@ -163,8 +165,8 @@ await click('Add a house');
 await shot('settings-add-house', true);
 await click('‹ Back');
 await click('‹ Back');
-await click('Suppliers');
-await shot('settings-suppliers', true);
+await click('Partners');
+await shot('settings-partners', true);
 await click('‹ Back');
 await click('Expense categories');
 await type('input[aria-label="Category name"]', 'Electricity');

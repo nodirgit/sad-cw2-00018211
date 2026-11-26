@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ThresholdRange } from '../../domain/environment/ThresholdRange';
 import type { House } from '../../domain/farm/House';
-import { SUPPLIER_TYPE_LABEL, Supplier, SupplierType } from '../../domain/feed/Supplier';
+import type { Partner } from '../../domain/partners/Partner';
+import { BUY_GROUPS, GroupOption, SELL_GROUPS } from '../components/PartnerPicker';
 import type { CustomCategory } from '../../domain/finance/CustomCategory';
 import { EXPENSE_CATEGORY_LABEL, ExpenseCategory } from '../../domain/finance/Expense';
 import { useUser } from '../AppContext';
@@ -334,95 +335,106 @@ function DeleteHouse({ house }: { house: House }) {
   );
 }
 
-/* ---------------- Suppliers (NFR-05) ---------------- */
+/* ---------------- Partners (NFR-05): who we sell to and buy from ---------------- */
 
-export function SuppliersScreen() {
+export function PartnersScreen() {
   const { c, user, refresh } = useUser();
   const [name, setName] = useState('');
-  const [type, setType] = useState<SupplierType>(SupplierType.FEED);
+  const [group, setGroup] = useState(SELL_GROUPS[1].key);
   const [msg, setMsg] = useState<string | null>(null);
   const { error, run } = useAction();
+  const all = c.partners.activePartners();
 
   function add() {
-    const s = run(() => c.suppliers.addSupplier(name, type, user));
-    if (s) {
-      setMsg(`${s.getName()} added.`);
+    const opt = [...SELL_GROUPS, ...BUY_GROUPS].find((o) => o.key === group)!;
+    const p = run(() => opt.add(c, name, user));
+    if (p) {
+      setMsg(`${p.getName()} added to ${p.groupLabel()}.`);
       setName('');
       refresh();
     }
   }
 
-  return (
-    <Screen title="Suppliers" subtitle="Settings · NFR-05">
-      {[SupplierType.FEED, SupplierType.CHICKS].map((t) => {
-        const list = c.suppliers.activeSuppliers(t);
+  const section = (title: string, groups: GroupOption[]) => (
+    <>
+      <div className="section-title">{title}</div>
+      {groups.map((g) => {
+        const list = all.filter((p) => p.groupLabel() === g.label);
         return (
-          <div key={t}>
-            <div className="section-title">{SUPPLIER_TYPE_LABEL[t]} suppliers</div>
-            <div className="card" style={{ marginTop: 10 }}>
-              {list.length === 0 && <p className="small muted" style={{ margin: 0 }}>None.</p>}
-              {list.map((s) => (
-                <SupplierRow key={s.getId()} supplier={s} />
-              ))}
-            </div>
+          <div key={g.key} className="card">
+            <h3 style={{ marginTop: 0 }}>{g.label}</h3>
+            {list.length === 0 && <p className="small muted" style={{ margin: 0 }}>None.</p>}
+            {list.map((p) => (
+              <PartnerRow key={p.getId()} partner={p} />
+            ))}
           </div>
         );
       })}
+    </>
+  );
 
-      <div className="section-title">Add a supplier</div>
+  return (
+    <Screen title="Partners" subtitle="Settings · who we trade with">
+      {section('We sell to', SELL_GROUPS)}
+      {section('We buy from', BUY_GROUPS)}
+
+      <div className="section-title">Add a partner</div>
       <div className="card">
-        <input className="input" style={{ fontSize: 17 }} placeholder="Supplier name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Supplier name" />
-        <div className="seg" role="radiogroup" aria-label="Supplier type" style={{ marginTop: 8 }}>
-          {[SupplierType.FEED, SupplierType.CHICKS].map((t) => (
-            <button key={t} className={type === t ? 'on' : ''} onClick={() => setType(t)} role="radio" aria-checked={type === t}>
-              {SUPPLIER_TYPE_LABEL[t]}
+        <input className="input" style={{ fontSize: 17 }} placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Partner name" />
+        <div className="seg" role="radiogroup" aria-label="Group" style={{ marginTop: 8, gridTemplateColumns: 'repeat(3, 1fr)', gridAutoFlow: 'row' }}>
+          {[...SELL_GROUPS, ...BUY_GROUPS].map((o) => (
+            <button key={o.key} className={group === o.key ? 'on' : ''} onClick={() => setGroup(o.key)} role="radio" aria-checked={group === o.key}>
+              {o.label}
             </button>
           ))}
         </div>
         <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={add} disabled={!name.trim()}>
-          Add supplier
+          Add partner
         </button>
         <ErrorNotice error={error} />
         {msg && !error && <div style={{ marginTop: 10 }}><Notice kind="ok">{msg}</Notice></div>}
       </div>
-      <p className="tiny muted">A deleted supplier leaves every list; past deliveries still show its name.</p>
+      <p className="tiny muted">
+        Partners can also be added on the spot while recording a sale or a feed delivery. A deleted partner leaves every list; past sales and
+        deliveries still show its name.
+      </p>
     </Screen>
   );
 }
 
-function SupplierRow({ supplier }: { supplier: Supplier }) {
+function PartnerRow({ partner }: { partner: Partner }) {
   const { c, user, refresh } = useUser();
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(supplier.getName());
+  const [name, setName] = useState(partner.getName());
   const { error, setError, run } = useAction();
 
   function save() {
-    if (run(() => c.suppliers.renameSupplier(supplier.getId(), name, user))) {
+    if (run(() => c.partners.renamePartner(partner.getId(), name, user))) {
       setEditing(false);
       refresh();
     }
   }
 
   function remove() {
-    if (run(() => (c.suppliers.removeSupplier(supplier.getId(), user), true))) refresh();
+    if (run(() => (c.partners.removePartner(partner.getId(), user), true))) refresh();
   }
 
   return (
     <div className="rec">
       {editing ? (
         <>
-          <input className="input" style={{ fontSize: 17 }} value={name} onChange={(e) => setName(e.target.value)} aria-label="Supplier name" />
-          <EditButtons onCancel={() => { setEditing(false); setName(supplier.getName()); setError(null); }} onSave={save} saveDisabled={!name.trim()} />
+          <input className="input" style={{ fontSize: 17 }} value={name} onChange={(e) => setName(e.target.value)} aria-label="Partner name" />
+          <EditButtons onCancel={() => { setEditing(false); setName(partner.getName()); setError(null); }} onSave={save} saveDisabled={!name.trim()} />
         </>
       ) : (
         <div className="top">
           <div className="main">
-            <b>{supplier.getName()}</b>
+            <b>{partner.getName()}</b>
           </div>
           <RowActions
-            onEdit={() => { setName(supplier.getName()); setEditing(true); }}
+            onEdit={() => { setName(partner.getName()); setEditing(true); }}
             onDelete={remove}
-            confirmText={`Remove ${supplier.getName()} from the supplier list? Past deliveries keep its name.`}
+            confirmText={`Remove ${partner.getName()} from the partners? Past sales and deliveries keep its name.`}
           />
         </div>
       )}
