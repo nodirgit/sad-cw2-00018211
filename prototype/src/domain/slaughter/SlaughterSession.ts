@@ -88,6 +88,11 @@ export class SlaughterSession {
     return this.saleId !== null;
   }
 
+  /** Undo a sale recorded by mistake; the weights stay. */
+  clearSale(): void {
+    this.saleId = null;
+  }
+
   markSold(saleId: string): void {
     if (this.saleId) throw new DomainError('A sale is already recorded for this session.');
     this.saleId = saleId;

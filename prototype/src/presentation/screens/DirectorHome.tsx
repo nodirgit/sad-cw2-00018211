@@ -9,7 +9,7 @@ const ACTIONS: { label: string; req: string; route: Route }[] = [
   { label: 'Feed delivery', req: 'FR-02', route: { name: 'feed' } },
   { label: 'Slaughter', req: 'FR-04 · NFR-04', route: { name: 'slaughter' } },
   { label: 'Agent cross-check', req: 'FR-05', route: { name: 'crosscheck' } },
-  { label: 'Voice entry', req: 'FR-06', route: { name: 'voice' } },
+  { label: 'Expense entry', req: 'FR-03 · FR-06 voice', route: { name: 'expense' } },
   { label: 'Batch profit', req: 'FR-03', route: { name: 'profit' } },
 ];
 
@@ -39,7 +39,7 @@ export function DirectorHome() {
         </button>
         <button className="tile" onClick={() => go({ name: 'settings' })}>
           <b>Settings</b>
-          <span>Houses · ranges · demo data</span>
+          <span>Houses · suppliers · demo data</span>
         </button>
       </div>
     </Screen>

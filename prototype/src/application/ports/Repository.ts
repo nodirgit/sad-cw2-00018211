@@ -12,4 +12,5 @@ export interface Repository<T extends Identifiable> {
   findAll(): T[];
   findById(id: string): T | undefined;
   save(item: T): void;
+  delete(id: string): void;
 }

@@ -27,6 +27,15 @@ export class LocalStorageRepository<T extends Identifiable> implements Repositor
 
   save(item: T): void {
     this.load().set(item.getId(), item);
+    this.write();
+  }
+
+  delete(id: string): void {
+    this.load().delete(id);
+    this.write();
+  }
+
+  private write(): void {
     this.storage.setItem(this.key, JSON.stringify(this.findAll().map((i) => this.serializer.toRecord(i))));
   }
 

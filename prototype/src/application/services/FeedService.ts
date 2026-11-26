@@ -2,7 +2,7 @@ import { DomainError } from '../../domain/DomainError';
 import { Batch } from '../../domain/farm/Batch';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
-import { ExpenseCategory } from '../../domain/finance/Expense';
+import { ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { User } from '../../domain/people/User';
 import { newId } from '../ids';
 import { Repository } from '../ports/Repository';
@@ -57,9 +57,69 @@ export class FeedService {
     const delivery = new FeedDelivery(newId('feed'), batch.getId(), supplier, date, quantityKg, cost);
     this.deliveries.save(delivery);
     if (cost !== null) {
-      this.profit.recordExpenseForBatch(batch.getId(), ExpenseCategory.FEED, cost, `${quantityKg.toLocaleString('en-US')} kg, ${supplier.getName()}`, date, user, `exp-${delivery.getId()}`);
+      this.bookCost(delivery, user);
     }
     return { delivery, feedPerBirdKg: this.feedPerBird(batch) };
+  }
+
+  /** NFR-03: a Worker may change only deliveries without a cost; the Director any. The batch must be open. */
+  canChange(delivery: FeedDelivery, user: User): boolean {
+    return (this.policy.canSeeMoney(user) || !delivery.hasCost()) && (this.farm.batch(delivery.getBatchId())?.isOpen() ?? false);
+  }
+
+  /** Correct supplier, kg or (Director only) cost. The linked FEED expense follows the cost. */
+  editDelivery(deliveryId: string, supplierId: string, quantityKg: number, cost: number | null, user: User): FeedDelivery {
+    const old = this.changeable(deliveryId, user);
+    if (cost !== null && !this.policy.canSeeMoney(user)) throw new DomainError('Only the Director enters feed costs.');
+    const supplier = this.suppliers.findById(supplierId);
+    if (!supplier || (!supplier.isActive() && supplier.getId() !== old.getSupplier().getId())) throw new DomainError('Pick a supplier.');
+    const keepCost = this.policy.canSeeMoney(user) ? cost : old.getCost();
+    const updated = new FeedDelivery(old.getId(), old.getBatchId(), supplier, old.getDate(), quantityKg, keepCost);
+    this.deliveries.save(updated);
+    if (updated.hasCost()) this.bookCost(updated, user);
+    else if (old.hasCost()) this.profit.removeLinkedEntry(FeedService.expenseId(updated), user);
+    return updated;
+  }
+
+  /** Remove a delivery entered by mistake, with its FEED expense. */
+  deleteDelivery(deliveryId: string, user: User): void {
+    const old = this.changeable(deliveryId, user);
+    this.deliveries.delete(deliveryId);
+    if (old.hasCost()) this.profit.removeLinkedEntry(FeedService.expenseId(old), user);
+  }
+
+  /** Active feed suppliers, plus this delivery's own supplier if it was removed since. */
+  suppliersFor(delivery: FeedDelivery): Supplier[] {
+    const list = this.feedSuppliers();
+    return list.some((s) => s.getId() === delivery.getSupplier().getId()) ? list : [delivery.getSupplier(), ...list];
+  }
+
+  private changeable(deliveryId: string, user: User): FeedDelivery {
+    const d = this.deliveries.findById(deliveryId);
+    if (!d) throw new DomainError('Delivery not found.');
+    if (!(this.farm.batch(d.getBatchId())?.isOpen() ?? false)) throw new DomainError('This batch is closed; its records are locked.');
+    if (!this.policy.canSeeMoney(user) && d.hasCost()) throw new DomainError('This delivery has a cost; only the Director can change it.');
+    return d;
+  }
+
+  /** FR-03: the delivery's cost is a FEED expense of its batch, with a fixed id so a change replaces it. */
+  private bookCost(delivery: FeedDelivery, user: User): void {
+    const cost = delivery.getCost();
+    if (cost === null) return;
+    this.profit.recordExpenseForBatch(
+      delivery.getBatchId(),
+      ExpenseCategory.FEED,
+      cost,
+      `${delivery.getQuantityKg().toLocaleString('en-US')} kg, ${delivery.getSupplier().getName()}`,
+      delivery.getDate(),
+      user,
+      FeedService.expenseId(delivery),
+      ExpenseSource.FEED_DELIVERY,
+    );
+  }
+
+  private static expenseId(delivery: FeedDelivery): string {
+    return `exp-${delivery.getId()}`;
   }
 
   deliveriesFor(batchId: string): FeedDelivery[] {

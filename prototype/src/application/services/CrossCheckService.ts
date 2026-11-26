@@ -23,7 +23,7 @@ export class CrossCheckService {
   /** The figure from the agent's Telegram photo. */
   enterAgentKg(sessionId: string, kg: number, user: User): CrossCheckStatus {
     this.policy.requireDirector(user);
-    const session = this.session(sessionId);
+    const session = this.unsold(sessionId);
     session.getTally().enterAgentKg(kg);
     this.sessions.save(session);
     return session.getTally().status();
@@ -32,7 +32,7 @@ export class CrossCheckService {
   /** The figure the Trusted Representative wrote down at the same weighings. */
   enterRepresentativeKg(sessionId: string, kg: number, user: User): CrossCheckStatus {
     this.policy.requireDirector(user);
-    const session = this.session(sessionId);
+    const session = this.unsold(sessionId);
     session.getTally().enterRepresentativeKg(kg);
     this.sessions.save(session);
     return session.getTally().status();
@@ -59,6 +59,23 @@ export class CrossCheckService {
     session.markSold(sale.getId());
     this.sessions.save(session);
     return sale;
+  }
+
+  /** Undo a sale recorded by mistake: the Sale entry goes, the weights stay and can be corrected. */
+  undoSale(sessionId: string, user: User): void {
+    this.policy.requireDirector(user);
+    const session = this.session(sessionId);
+    const saleId = session.getSaleId();
+    if (!saleId) throw new DomainError('No sale is recorded for this session.');
+    this.profit.removeLinkedEntry(saleId, user);
+    session.clearSale();
+    this.sessions.save(session);
+  }
+
+  private unsold(sessionId: string): SlaughterSession {
+    const session = this.session(sessionId);
+    if (session.isSold()) throw new DomainError('The sale is recorded. Undo the sale to change the weights.');
+    return session;
   }
 
   private session(sessionId: string): SlaughterSession {

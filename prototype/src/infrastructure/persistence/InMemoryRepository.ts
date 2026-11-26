@@ -19,4 +19,8 @@ export class InMemoryRepository<T extends Identifiable> implements Repository<T>
   save(item: T): void {
     this.items.set(item.getId(), item);
   }
+
+  delete(id: string): void {
+    this.items.delete(id);
+  }
 }

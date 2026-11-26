@@ -14,8 +14,8 @@ function startOfDay(d: Date): number {
 export class Batch {
   private readonly id: string;
   private readonly houseId: string;
-  private readonly startDate: Date;
-  private readonly chicksPlaced: number;
+  private startDate: Date;
+  private chicksPlaced: number;
   private status: BatchStatus;
 
   constructor(id: string, houseId: string, startDate: Date, chicksPlaced: number, status: BatchStatus = BatchStatus.OPEN) {
@@ -67,5 +67,18 @@ export class Batch {
 
   close(): void {
     this.status = BatchStatus.CLOSED;
+  }
+
+  /** Undo a close made by mistake (the House checks no other batch is open). */
+  reopen(): void {
+    if (this.status === BatchStatus.CLOSED) this.status = BatchStatus.OPEN;
+  }
+
+  /** Correct the placement figures entered when the batch started. */
+  correctPlacement(chicksPlaced: number, startDate: Date): void {
+    if (!Number.isInteger(chicksPlaced) || chicksPlaced <= 0) throw new DomainError('Chicks placed must be a whole number above 0.');
+    if (startDate.getTime() > Date.now()) throw new DomainError('The start date cannot be in the future.');
+    this.chicksPlaced = chicksPlaced;
+    this.startDate = startDate;
   }
 }

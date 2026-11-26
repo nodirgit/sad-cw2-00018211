@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 22 unit tests of the business rules (Vitest) |
+| `npm test` | 28 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -39,22 +39,38 @@ Other commands:
 | Login | NFR-03 | user + 4-digit PIN |
 | Director home | FR-07, FR-08, NFR-01 | one card per house: batch day, chicks, deaths today / in batch, live temperature and humidity with an alert outside the house's range, light switch |
 | Worker home | NFR-03 | the same house cards, only *Log death* and *Feed delivery*, no money anywhere |
-| Log death | FR-01, NFR-02 | house + count + Save; the same count in the same house within 2 minutes is flagged **possible duplicate** and not counted twice, with "it was a different bird — count it" |
-| Feed delivery | FR-02, NFR-03 | supplier → house → that house's open batch; feed per bird for the batch; the cost field only for the Director, and it becomes a batch cost |
-| Batch profit | FR-03 | per house: running profit, costs by category, sales by buyer, entries — each batch on its own |
-| Slaughter session | FR-04, NFR-04 | head count + rate → crew payment shown at once; "Correct count" needs a note and keeps the history |
-| Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; *Record sale* only on MATCH |
-| Voice entry | FR-06 | microphone (Web Speech API, Uzbek) or text → amount, date, category, reason; anything unsure is amber and must be confirmed before saving |
-| Settings | FR-07, NFR-05 | normal range per house; **add, edit and delete houses** (name + capacity; delete only with no open batch), start / close a batch; **add, rename and delete suppliers** (deleted suppliers are archived so past deliveries keep their name); reset demo data |
+| Log death | FR-01, NFR-02 | house + count + Save; the same count in the same house within 2 minutes is flagged **possible duplicate** and not counted twice, with "it was a different bird — count it"; latest entries can be corrected or deleted |
+| Feed delivery | FR-02, NFR-03 | supplier → house → that house's open batch; feed per bird for the batch; the cost field only for the Director, and it becomes a batch cost; deliveries can be corrected or deleted |
+| Batch profit | FR-03 | per house: running profit, costs by category, sales by buyer, entries — each batch on its own; manual expenses and direct sales can be edited or deleted here, linked entries say where they are changed |
+| Slaughter session | FR-04, NFR-04 | head count + rate → crew payment shown at once; "Correct count" needs a note and keeps the history; an empty session can be deleted |
+| Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; *Record sale* only on MATCH; *Undo sale* if it was recorded by mistake |
+| Expense entry | FR-03, FR-06 | a normal form (amount, date, category, what for, house) that always works; **voice is an optional helper**: speak (Web Speech API, Uzbek) or type a sentence and it fills the form; anything unsure is amber and must be checked before saving; recent expenses can be edited or deleted |
+| Settings | FR-07, NFR-05 | grouped like a phone's settings: **Houses** (list → one house: details, batch, normal range, delete; add a house), **Suppliers** (feed and chick suppliers: add, rename, delete), **Demo data** (what is invented, reset) |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 
 Screenshots of every screen are in [`screenshots/`](screenshots).
+
+## Editing and deleting records
+
+Every record a person enters can be corrected or deleted, unless another record depends on it. Then the screen says where it is changed instead.
+
+| Record | Edit | Delete | Rule |
+|---|---|---|---|
+| Death | count | yes | the person who logged it, or the Director; only while the batch is open |
+| Feed delivery | supplier, kg, cost | yes | a Worker only for deliveries without a cost (NFR-03); the FEED expense follows the cost |
+| Expense typed in | all fields | yes | Director; feed costs and crew pay are changed with their delivery / session |
+| Direct sale (shop, Nurata seller, client) | kg, price per kg | yes | Director |
+| Bazaar Agent sale | — | *Undo sale* on the cross-check | then the weights can be corrected and the sale recorded again (FR-05) |
+| Slaughter session | head count by *correction with a note* | only while empty | a counted session is the crew's pay record (NFR-04) |
+| House | name, capacity | when no open batch | capacity never below the chicks placed; at least one house |
+| Batch | chicks placed, start date; close / reopen | — | its records hang on it |
+| Supplier | name | yes (archived) | past deliveries keep the name |
 
 ## What is simulated or demo
 
 - **Sensors** (FR-07): `SimulatedSensorProvider` — a random walk around a baseline per house. House 2 runs hot on purpose so the alert is visible. Labelled "Simulated sensor" in the app.
 - **Light relay** (FR-08): `SimulatedLightController` — 0.7 s delay; every 4th command "loses the connection" and returns *not confirmed*, and the app keeps the old state and says so.
-- **Voice** (FR-06): speech-to-text is the browser's Web Speech API (Chrome/Edge); the parsing is our own `RuleBasedVoiceParser` (rules, no AI service). The text box always works without a microphone.
+- **Voice** (FR-06): speech-to-text is the browser's Web Speech API (Chrome/Edge); the parsing is our own `RuleBasedVoiceParser` (rules, no AI service). It only fills the expense form; the form works without it.
 - **Storage**: the browser's `localStorage` behind the `Repository<T>` interface. A real database would be a new class implementing the same interface, changed in `src/app/container.ts` only.
 - **Demo data** (`src/infrastructure/demo/DemoData.ts`): two houses on different schedules (House 1 day 38, thinning started; House 2 day 12). Farm, buyers and buyer prices (~26,000 / 27,000 / 28,000 UZS per kg) come from the case. **Invented demo values:** supplier names, chick price, feed price, crew rate per head (1,000 UZS), client price, all counts and kg, the PINs.
 
@@ -71,7 +87,7 @@ src/
   application/
     ports/           interfaces: Repository<T>, VoiceParser, SensorProvider, LightController, SpeechRecognizer
     services/        one responsibility each (SRP): AuthService, AccessPolicy, FarmService, MortalityService,
-                     FeedService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
+                     FeedService, SupplierService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
                      MonitoringService, LightingService
   domain/            entities, value objects, enums, abstract classes — no React, no storage
     people/          User (abstract), Director, Worker

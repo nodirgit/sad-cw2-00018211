@@ -92,6 +92,22 @@ export class FarmService {
     this.save();
   }
 
+  /** Correct the open batch's chicks placed and start date. */
+  editBatch(houseId: string, chicksPlaced: number, startDate: Date, user: User): Batch {
+    this.policy.requireDirector(user);
+    const batch = this.house(houseId).correctBatch(chicksPlaced, startDate);
+    this.save();
+    return batch;
+  }
+
+  /** Undo a close made by mistake. */
+  reopenBatch(houseId: string, user: User): Batch {
+    this.policy.requireDirector(user);
+    const batch = this.house(houseId).reopenLastBatch();
+    this.save();
+    return batch;
+  }
+
   /** FR-07: the director decides what counts as abnormal for each house. */
   setThresholds(houseId: string, range: ThresholdRange, user: User): void {
     this.policy.requireDirector(user);

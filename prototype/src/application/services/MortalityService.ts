@@ -4,6 +4,7 @@ import { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { User } from '../../domain/people/User';
 import { newId } from '../ids';
 import { Repository } from '../ports/Repository';
+import { AccessPolicy } from './AccessPolicy';
 import { FarmService } from './FarmService';
 
 export interface DeathLogResult {
@@ -23,11 +24,13 @@ export class MortalityService {
 
   private readonly records: Repository<MortalityRecord>;
   private readonly farm: FarmService;
+  private readonly policy: AccessPolicy;
   private readonly clock: () => Date;
 
-  constructor(records: Repository<MortalityRecord>, farm: FarmService, clock: () => Date = () => new Date()) {
+  constructor(records: Repository<MortalityRecord>, farm: FarmService, policy: AccessPolicy, clock: () => Date = () => new Date()) {
     this.records = records;
     this.farm = farm;
+    this.policy = policy;
     this.clock = clock;
   }
 
@@ -49,6 +52,33 @@ export class MortalityService {
     if (!record) throw new DomainError('Record not found.');
     record.confirmSeparate();
     this.records.save(record);
+    return record;
+  }
+
+  /** The worker who logged it, or the Director, while the batch is open. */
+  canChange(record: MortalityRecord, user: User): boolean {
+    return this.policy.canChange(user, record.getLoggedBy()) && (this.farm.batch(record.getBatchId())?.isOpen() ?? false);
+  }
+
+  /** Correct a mistyped count. The death totals are always recalculated from the records. */
+  editDeath(recordId: string, count: number, user: User): MortalityRecord {
+    const record = this.changeable(recordId, user);
+    record.changeCount(count);
+    this.records.save(record);
+    return record;
+  }
+
+  /** Remove an entry made by mistake. */
+  deleteDeath(recordId: string, user: User): void {
+    this.changeable(recordId, user);
+    this.records.delete(recordId);
+  }
+
+  private changeable(recordId: string, user: User): MortalityRecord {
+    const record = this.records.findById(recordId);
+    if (!record) throw new DomainError('Record not found.');
+    if (!(this.farm.batch(record.getBatchId())?.isOpen() ?? false)) throw new DomainError('This batch is closed; its records are locked.');
+    if (!this.policy.canChange(user, record.getLoggedBy())) throw new DomainError('Only the person who logged it or the Director can change it.');
     return record;
   }
 

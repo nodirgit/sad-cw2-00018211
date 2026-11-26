@@ -83,6 +83,24 @@ export class House {
     this.capacity = capacity;
   }
 
+  /** Correct the open batch's chicks placed and start date (never above capacity). */
+  correctBatch(chicksPlaced: number, startDate: Date): Batch {
+    const batch = this.currentBatch();
+    if (!batch) throw new DomainError(`${this.name} has no open batch.`);
+    if (chicksPlaced > this.capacity) throw new DomainError(`${this.name} holds at most ${this.capacity.toLocaleString('en-US')} birds.`);
+    batch.correctPlacement(chicksPlaced, startDate);
+    return batch;
+  }
+
+  /** Reopen the most recent batch if it was closed by mistake. */
+  reopenLastBatch(): Batch {
+    if (this.currentBatch()) throw new DomainError(`${this.name} already has an open batch.`);
+    const last = this.batches[this.batches.length - 1];
+    if (!last) throw new DomainError(`${this.name} has no batch to reopen.`);
+    last.reopen();
+    return last;
+  }
+
   /** FR-08: only called once the light controller has confirmed the change. */
   setLight(on: boolean): void {
     this.lightOn = on;

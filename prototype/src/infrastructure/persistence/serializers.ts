@@ -9,7 +9,7 @@ import { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
 import { BazaarAgent, Buyer, Client, NurataSeller, ShopCustomer } from '../../domain/finance/Buyer';
-import { Expense, ExpenseCategory } from '../../domain/finance/Expense';
+import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
 import { User } from '../../domain/people/User';
@@ -107,17 +107,24 @@ export function buyerFrom(type: string, name: string): Buyer {
   return make(name);
 }
 
+/** Records saved before ExpenseSource existed: the id tells where they came from. */
+function legacySource(id: string): ExpenseSource {
+  if (id.startsWith('exp-crew-')) return ExpenseSource.CREW_PAY;
+  if (id.startsWith('exp-feed')) return ExpenseSource.FEED_DELIVERY;
+  return ExpenseSource.MANUAL;
+}
+
 export const financeSerializer: Serializer<FinancialEntry> = {
   toRecord: (e) => {
     const base = { id: e.getId(), batchId: e.getBatchId(), date: e.getDate().toISOString(), amount: e.getAmount() };
-    if (e instanceof Expense) return { ...base, kind: 'expense', category: e.getCategory(), note: e.getNote() };
+    if (e instanceof Expense) return { ...base, kind: 'expense', category: e.getCategory(), note: e.getNote(), source: e.getSource() };
     if (e instanceof Sale) return { ...base, kind: 'sale', buyerType: e.getBuyer().typeLabel(), buyerName: e.getBuyer().getName(), kg: e.getKg(), pricePerKg: e.getPricePerKg() };
     throw new DomainError('Unknown financial entry');
   },
   fromRecord: (r) =>
     r.kind === 'sale'
       ? new Sale(r.id, r.batchId, d(r.date), buyerFrom(r.buyerType, r.buyerName), r.kg, r.pricePerKg)
-      : new Expense(r.id, r.batchId, d(r.date), r.amount, r.category as ExpenseCategory, r.note),
+      : new Expense(r.id, r.batchId, d(r.date), r.amount, r.category as ExpenseCategory, r.note, (r.source as ExpenseSource) ?? legacySource(r.id)),
 };
 
 export const sessionSerializer: Serializer<SlaughterSession> = {

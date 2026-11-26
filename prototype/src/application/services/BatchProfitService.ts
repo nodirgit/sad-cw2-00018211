@@ -1,6 +1,6 @@
 import { DomainError } from '../../domain/DomainError';
 import { Buyer } from '../../domain/finance/Buyer';
-import { Expense, ExpenseCategory } from '../../domain/finance/Expense';
+import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
 import { User } from '../../domain/people/User';
@@ -44,9 +44,18 @@ export class BatchProfitService {
   }
 
   /** Used when the batch is already known (crew pay for a session, a feed delivery). Same id = replace. */
-  recordExpenseForBatch(batchId: string, category: ExpenseCategory, amount: number, note: string, date: Date, user: User, id: string = newId('exp')): Expense {
+  recordExpenseForBatch(
+    batchId: string,
+    category: ExpenseCategory,
+    amount: number,
+    note: string,
+    date: Date,
+    user: User,
+    id: string = newId('exp'),
+    source: ExpenseSource = ExpenseSource.MANUAL,
+  ): Expense {
     this.policy.requireDirector(user);
-    const expense = new Expense(id, batchId, date, amount, category, note);
+    const expense = new Expense(id, batchId, date, amount, category, note, source);
     this.entries.save(expense);
     return expense;
   }
@@ -65,6 +74,75 @@ export class BatchProfitService {
     const sale = new Sale(newId('sale'), batchId, date, buyer, kg, pricePerKg);
     this.entries.save(sale);
     return sale;
+  }
+
+  /** Expenses typed in by hand (Expense entry), newest first. */
+  manualExpenses(user: User): Expense[] {
+    this.policy.requireDirector(user);
+    return this.entries
+      .findAll()
+      .filter((e): e is Expense => e instanceof Expense && !e.isLinked())
+      .sort((a, b) => b.getDate().getTime() - a.getDate().getTime());
+  }
+
+  /** Why an entry cannot be changed here, or null when it can (a manual expense). */
+  lockReason(entry: FinancialEntry): string | null {
+    // FR-05: a Bazaar Agent sale belongs to its slaughter session's cross-check (polymorphism: requiresCrossCheck()).
+    if (entry instanceof Sale && entry.getBuyer().requiresCrossCheck()) return 'Recorded from the agent cross-check. Undo the sale there.';
+    if (entry instanceof Expense && entry.getSource() === ExpenseSource.FEED_DELIVERY) return 'Comes from a feed delivery. Change it on the Feed delivery screen.';
+    if (entry instanceof Expense && entry.getSource() === ExpenseSource.CREW_PAY) return "The crew's pay for a slaughter session. Correct the head count there.";
+    return null;
+  }
+
+  /** Correct a hand-typed expense; it stays on its batch. */
+  editExpense(expenseId: string, category: ExpenseCategory, amount: number, note: string, date: Date, user: User): Expense {
+    this.policy.requireDirector(user);
+    const old = this.manualExpense(expenseId);
+    const updated = new Expense(old.getId(), old.getBatchId(), date, amount, category, note.trim(), ExpenseSource.MANUAL);
+    this.entries.save(updated);
+    return updated;
+  }
+
+  deleteExpense(expenseId: string, user: User): void {
+    this.policy.requireDirector(user);
+    this.manualExpense(expenseId);
+    this.entries.delete(expenseId);
+  }
+
+  /** Correct a direct sale (shop, Nurata seller, client): kg and price per kg. */
+  editDirectSale(saleId: string, kg: number, pricePerKg: number, user: User): Sale {
+    this.policy.requireDirector(user);
+    const old = this.entries.findById(saleId);
+    if (!(old instanceof Sale)) throw new DomainError('Sale not found.');
+    const locked = this.lockReason(old);
+    if (locked) throw new DomainError(locked);
+    const updated = new Sale(old.getId(), old.getBatchId(), old.getDate(), old.getBuyer(), kg, pricePerKg);
+    this.entries.save(updated);
+    return updated;
+  }
+
+  /** Delete any entry that is not owned by another record (a manual expense or a direct sale). */
+  deleteEntry(entryId: string, user: User): void {
+    this.policy.requireDirector(user);
+    const e = this.entries.findById(entryId);
+    if (!e) throw new DomainError('Entry not found.');
+    const locked = this.lockReason(e);
+    if (locked) throw new DomainError(locked);
+    this.entries.delete(entryId);
+  }
+
+  /** Used by the service that owns a linked entry (feed cost, sale) when that record changes. */
+  removeLinkedEntry(entryId: string, user: User): void {
+    this.policy.requireDirector(user);
+    this.entries.delete(entryId);
+  }
+
+  private manualExpense(expenseId: string): Expense {
+    const e = this.entries.findById(expenseId);
+    if (!(e instanceof Expense)) throw new DomainError('Expense not found.');
+    const locked = this.lockReason(e);
+    if (locked) throw new DomainError(locked);
+    return e;
   }
 
   /** FR-03: profit = Σ signedAmount() — Expense is negative, Sale positive (polymorphism). */

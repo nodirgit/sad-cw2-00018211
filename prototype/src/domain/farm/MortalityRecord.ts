@@ -1,3 +1,4 @@
+import { DomainError } from '../DomainError';
 import { User } from '../people/User';
 
 /**
@@ -9,7 +10,7 @@ export class MortalityRecord {
   private readonly batchId: string;
   private readonly houseId: string;
   private readonly timestamp: Date;
-  private readonly count: number;
+  private count: number;
   private readonly loggedBy: User;
   private flaggedDuplicate: boolean;
 
@@ -68,6 +69,12 @@ export class MortalityRecord {
       other.count === this.count &&
       Math.abs(other.timestamp.getTime() - this.timestamp.getTime()) <= windowMs
     );
+  }
+
+  /** Correct a mistyped count. */
+  changeCount(count: number): void {
+    if (!Number.isInteger(count) || count <= 0) throw new DomainError('Count must be a whole number above 0.');
+    this.count = count;
   }
 
   flagAsDuplicate(): void {

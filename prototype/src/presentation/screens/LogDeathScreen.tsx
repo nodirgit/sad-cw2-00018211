@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { DeathLogResult } from '../../application/services/MortalityService';
+import type { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { useUser } from '../AppContext';
 import { HousePicker, useDefaultHouse } from '../components/HousePicker';
 import { ErrorNotice, Notice } from '../components/Notice';
+import { EditButtons, RowActions } from '../components/RowActions';
 import { Screen } from '../components/Screen';
-import { ago, time } from '../format';
+import { ago, parseNumber, time } from '../format';
 import { useAction } from '../useAction';
 
 /** FR-01: the worker who finds a dead chick logs it here, at once, tagged to the house. */
@@ -74,19 +76,63 @@ export function LogDeathScreen({ houseId: initial }: { houseId?: string }) {
       {batch && (
         <div className="card">
           <h2>{house.getName()} — latest entries</h2>
-          <div className="lines">
-            {c.mortality.recordsForBatch(batch.getId()).slice(0, 6).map((r) => (
-              <div key={r.getId()} className={`line ${r.isFlaggedDuplicate() ? 'flagged' : ''}`}>
-                <span className="l">
-                  {r.getLoggedBy().getName()} · {ago(r.getTimestamp())}
-                  {r.isFlaggedDuplicate() && <span className="chip warn" style={{ marginLeft: 6 }}>duplicate</span>}
-                </span>
-                <span className="r">{r.getCount()}</span>
-              </div>
+          <p className="tiny muted" style={{ marginTop: -4 }}>You can correct or delete your own entries; the Director can change any.</p>
+          <div>
+            {c.mortality.recordsForBatch(batch.getId()).slice(0, 8).map((r) => (
+              <DeathRow key={r.getId()} record={r} onChanged={() => setResult(null)} />
             ))}
           </div>
         </div>
       )}
     </Screen>
+  );
+}
+
+function DeathRow({ record, onChanged }: { record: MortalityRecord; onChanged: () => void }) {
+  const { c, user, refresh } = useUser();
+  const [editing, setEditing] = useState(false);
+  const [count, setCount] = useState(String(record.getCount()));
+  const { error, setError, run } = useAction();
+  const can = c.mortality.canChange(record, user);
+
+  function save() {
+    if (run(() => c.mortality.editDeath(record.getId(), parseNumber(count), user))) {
+      setEditing(false);
+      onChanged();
+      refresh();
+    }
+  }
+
+  function remove() {
+    if (run(() => (c.mortality.deleteDeath(record.getId(), user), true))) {
+      onChanged();
+      refresh();
+    }
+  }
+
+  return (
+    <div className={`rec ${record.isFlaggedDuplicate() ? 'flagged' : ''}`}>
+      <div className="top">
+        <div className="main">
+          {record.getLoggedBy().getName()} · {ago(record.getTimestamp())}
+          {record.isFlaggedDuplicate() && <span className="chip warn" style={{ marginLeft: 6 }}>duplicate</span>}
+        </div>
+        <span className="val">{record.getCount()}</span>
+        {can && !editing && (
+          <RowActions
+            onEdit={() => { setCount(String(record.getCount())); setError(null); setEditing(true); }}
+            onDelete={remove}
+            confirmText={`Delete this entry (${record.getCount()} dead, ${time(record.getTimestamp())})?`}
+          />
+        )}
+      </div>
+      {editing && (
+        <>
+          <input className="input" inputMode="numeric" style={{ marginTop: 8 }} value={count} onChange={(e) => setCount(e.target.value)} aria-label="Correct count" />
+          <EditButtons onCancel={() => { setEditing(false); setError(null); }} onSave={save} saveDisabled={!count} />
+        </>
+      )}
+      <ErrorNotice error={error} />
+    </div>
   );
 }

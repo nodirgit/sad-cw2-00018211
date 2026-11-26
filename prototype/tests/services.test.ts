@@ -36,7 +36,7 @@ function setup(now = new Date('2026-11-25T14:00:00')) {
   let clock = now;
   const policy = new AccessPolicy();
   const farm = new FarmService(repos.farms, policy);
-  const mortality = new MortalityService(repos.deaths, farm, () => clock);
+  const mortality = new MortalityService(repos.deaths, farm, policy, () => clock);
   const profit = new BatchProfitService(repos.finance, farm, policy);
   const feed = new FeedService(repos.feed, repos.suppliers, farm, mortality, profit, policy);
   const slaughter = new SlaughterService(repos.sessions, farm, profit, policy, () => clock);
@@ -210,5 +210,83 @@ describe('NFR-05 suppliers by configuration', () => {
     expect(s.feed.feedSuppliers().map((x) => x.getId())).not.toContain(c.getId());
     expect(delivery.getSupplier().getName()).toBe('Demo Feed Factory C (Navoi)');
     expect(() => s.feed.recordDelivery('house-1', c.getId(), 500, null, worker1)).toThrow('Pick a supplier');
+  });
+});
+
+describe('Editing and deleting records', () => {
+  const total = (s: ReturnType<typeof setup>, batchId: string) => s.profit.profitFor(batchId, director).profit;
+
+  it('deaths: the person who logged it or the Director may correct or delete; totals follow', () => {
+    const s = setup();
+    const { record } = s.mortality.logDeath('house-2', 3, worker1);
+    const before = s.mortality.totalDeaths('batch-h2');
+    s.mortality.editDeath(record.getId(), 2, worker1);
+    expect(s.mortality.totalDeaths('batch-h2')).toBe(before - 1);
+    expect(() => s.mortality.editDeath(record.getId(), 5, worker2)).toThrow('Only the person who logged it');
+    s.mortality.deleteDeath(record.getId(), director);
+    expect(s.mortality.totalDeaths('batch-h2')).toBe(before - 3);
+  });
+
+  it('feed: editing the cost replaces its FEED expense; deleting removes both; workers only touch deliveries without a cost', () => {
+    const s = setup();
+    const { delivery } = s.feed.recordDelivery('house-2', 'sup-feed-a', 1000, 6_500_000, director);
+    const withCost = total(s, 'batch-h2');
+    s.feed.editDelivery(delivery.getId(), 'sup-feed-a', 1000, 5_000_000, director);
+    expect(total(s, 'batch-h2')).toBe(withCost + 1_500_000);
+    expect(() => s.feed.deleteDelivery(delivery.getId(), worker1)).toThrow('only the Director');
+    s.feed.deleteDelivery(delivery.getId(), director);
+    expect(total(s, 'batch-h2')).toBe(withCost + 6_500_000);
+    expect(s.feed.deliveriesFor('batch-h2').map((d) => d.getId())).not.toContain(delivery.getId());
+
+    const { delivery: w } = s.feed.recordDelivery('house-2', 'sup-feed-b', 500, null, worker1);
+    s.feed.editDelivery(w.getId(), 'sup-feed-b', 600, null, worker1);
+    expect(() => s.feed.editDelivery(w.getId(), 'sup-feed-b', 600, 100, worker1)).toThrow('Only the Director');
+  });
+
+  it('expenses: hand-typed ones can be edited and deleted; linked ones are locked', () => {
+    const s = setup();
+    const e = s.profit.recordExpense('house-2', ExpenseCategory.VET, 100_000, 'vitamins', new Date(), director);
+    const after = total(s, 'batch-h2');
+    s.profit.editExpense(e.getId(), ExpenseCategory.VET, 150_000, 'vitamins', new Date(), director);
+    expect(total(s, 'batch-h2')).toBe(after - 50_000);
+    s.profit.deleteExpense(e.getId(), director);
+    expect(total(s, 'batch-h2')).toBe(after + 100_000);
+    expect(() => s.profit.deleteExpense('exp-feed-demo-3', director)).toThrow('feed delivery');
+    expect(() => s.profit.editExpense('exp-crew-session-demo-1', ExpenseCategory.CREW, 1, 'x', new Date(), director)).toThrow('head count');
+  });
+
+  it('sessions: an empty session can be deleted; a counted one is kept (NFR-04); a sale can be undone', () => {
+    const s = setup();
+    const empty = s.slaughter.startSession('house-2', SessionKind.THINNING, director);
+    s.slaughter.deleteSession(empty.getId(), director);
+    expect(s.slaughter.allSessions().map((x) => x.getId())).not.toContain(empty.getId());
+    expect(() => s.slaughter.deleteSession('session-demo-2', director)).toThrow('crew paid');
+
+    const before = total(s, 'batch-h1');
+    s.crossCheck.undoSale('session-demo-1', director);
+    expect(total(s, 'batch-h1')).toBe(before - 2640 * 26000);
+    expect(s.slaughter.session('session-demo-1').isSold()).toBe(false);
+    s.crossCheck.enterAgentKg('session-demo-1', 2641, director); // weights editable again
+    expect(() => s.crossCheck.enterAgentKg('session-demo-2', 1, director)).not.toThrow();
+  });
+
+  it('batches: placement can be corrected and a closed batch reopened', () => {
+    const s = setup();
+    s.farm.editBatch('house-2', 5900, new Date('2026-11-13T08:00:00'), director);
+    expect(s.farm.openBatch('house-2').getChicksPlaced()).toBe(5900);
+    expect(() => s.farm.editBatch('house-2', 7000, new Date('2026-11-13T08:00:00'), director)).toThrow('at most');
+    s.farm.closeBatch('house-2', director);
+    s.farm.reopenBatch('house-2', director);
+    expect(s.farm.openBatch('house-2').getId()).toBe('batch-h2');
+  });
+
+  it('direct sales can be corrected or deleted; Bazaar Agent sales only through the cross-check', () => {
+    const s = setup();
+    const sale = s.profit.recordDirectSale('house-1', new NurataSeller('n'), 100, 27000, new Date(), director);
+    s.profit.editDirectSale(sale.getId(), 110, 27000, director);
+    expect(s.profit.profitFor('batch-h1', director).entries.find((e) => e.getId() === sale.getId())?.getAmount()).toBe(110 * 27000);
+    s.profit.deleteEntry(sale.getId(), director);
+    expect(s.profit.profitFor('batch-h1', director).entries.some((e) => e.getId() === sale.getId())).toBe(false);
+    expect(() => s.profit.deleteEntry('sale-demo-1', director)).toThrow('cross-check');
   });
 });

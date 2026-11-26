@@ -9,7 +9,7 @@ import { MortalityRecord } from '../../domain/farm/MortalityRecord';
 import { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { Supplier, SupplierType } from '../../domain/feed/Supplier';
 import { BazaarAgent, Client, ShopCustomer } from '../../domain/finance/Buyer';
-import { Expense, ExpenseCategory } from '../../domain/finance/Expense';
+import { Expense, ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { FinancialEntry } from '../../domain/finance/FinancialEntry';
 import { Sale } from '../../domain/finance/Sale';
 import { Director } from '../../domain/people/Director';
@@ -138,7 +138,7 @@ export class DemoSeeder {
     ];
     for (const [id, batchId, supplier, date, kg, cost] of feeds) {
       repos.feed.save(new FeedDelivery(id, batchId, supplier, date, kg, cost));
-      repos.finance.save(new Expense(`exp-${id}`, batchId, date, cost, ExpenseCategory.FEED, `${kg.toLocaleString('en-US')} kg, ${supplier.getName()}`));
+      repos.finance.save(new Expense(`exp-${id}`, batchId, date, cost, ExpenseCategory.FEED, `${kg.toLocaleString('en-US')} kg, ${supplier.getName()}`, ExpenseSource.FEED_DELIVERY));
     }
 
     // Other costs (demo amounts)
@@ -159,7 +159,7 @@ export class DemoSeeder {
     for (const s of [s1, s2]) {
       repos.sessions.save(s);
       const hc = s.getHeadCount()!;
-      repos.finance.save(new Expense(`exp-crew-${s.getId()}`, s.getBatchId(), s.getDate(), hc.crewPayment(), ExpenseCategory.CREW, `${hc.effectiveCount().toLocaleString('en-US')} head × ${hc.getRatePerHead().toLocaleString('en-US')}`));
+      repos.finance.save(new Expense(`exp-crew-${s.getId()}`, s.getBatchId(), s.getDate(), hc.crewPayment(), ExpenseCategory.CREW, `${hc.effectiveCount().toLocaleString('en-US')} head × ${hc.getRatePerHead().toLocaleString('en-US')}`, ExpenseSource.CREW_PAY));
     }
 
     const p = DEMO_DEFAULTS.pricePerKg;

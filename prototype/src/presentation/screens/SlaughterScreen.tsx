@@ -191,6 +191,22 @@ export function SlaughterScreen() {
           <button className="btn btn-secondary" onClick={() => go({ name: 'crosscheck', sessionId: selected.getId() })}>
             Bazaar weights cross-check →
           </button>
+
+          {!hc && !selected.isSold() && (
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (!window.confirm('Delete this session? Nothing has been recorded in it yet.')) return;
+                if (run(() => (c.slaughter.deleteSession(selected.getId(), user), true))) {
+                  pick(null);
+                  refresh();
+                }
+              }}
+            >
+              Delete session
+            </button>
+          )}
+          {hc && <p className="tiny muted">A session with a recorded head count is kept: the crew was paid (NFR-04). Correct the count with a note instead.</p>}
         </>
       )}
     </Screen>

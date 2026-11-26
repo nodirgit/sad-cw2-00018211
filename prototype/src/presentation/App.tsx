@@ -6,12 +6,12 @@ import { DirectorOnly } from './components/DirectorOnly';
 import { BatchProfitScreen } from './screens/BatchProfitScreen';
 import { CrossCheckScreen } from './screens/CrossCheckScreen';
 import { DirectorHome } from './screens/DirectorHome';
+import { ExpenseEntryScreen } from './screens/ExpenseEntryScreen';
 import { FeedDeliveryScreen } from './screens/FeedDeliveryScreen';
 import { LogDeathScreen } from './screens/LogDeathScreen';
 import { LoginScreen } from './screens/LoginScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
+import { DemoDataScreen, HouseNewScreen, HouseSettingsScreen, HousesScreen, SettingsScreen, SuppliersScreen } from './screens/SettingsScreen';
 import { SlaughterScreen } from './screens/SlaughterScreen';
-import { VoiceEntryScreen } from './screens/VoiceEntryScreen';
 import { WorkerHome } from './screens/WorkerHome';
 
 /** Presentation root: holds who is logged in and which screen is open. No business rules here. */
@@ -67,9 +67,19 @@ function screenFor(s: AppState) {
       return director ? <SlaughterScreen /> : <DirectorOnly />;
     case 'crosscheck':
       return director ? <CrossCheckScreen sessionId={r.sessionId} /> : <DirectorOnly />;
-    case 'voice':
-      return director ? <VoiceEntryScreen /> : <DirectorOnly />;
+    case 'expense':
+      return director ? <ExpenseEntryScreen editId={r.editId} /> : <DirectorOnly />;
     case 'settings':
       return director ? <SettingsScreen /> : <DirectorOnly />;
+    case 'settings-houses':
+      return director ? <HousesScreen /> : <DirectorOnly />;
+    case 'settings-house':
+      return director ? <HouseSettingsScreen houseId={r.houseId} /> : <DirectorOnly />;
+    case 'settings-house-new':
+      return director ? <HouseNewScreen /> : <DirectorOnly />;
+    case 'settings-suppliers':
+      return director ? <SuppliersScreen /> : <DirectorOnly />;
+    case 'settings-demo':
+      return director ? <DemoDataScreen /> : <DirectorOnly />;
   }
 }

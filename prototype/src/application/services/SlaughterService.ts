@@ -1,5 +1,5 @@
 import { DomainError } from '../../domain/DomainError';
-import { ExpenseCategory } from '../../domain/finance/Expense';
+import { ExpenseCategory, ExpenseSource } from '../../domain/finance/Expense';
 import { User } from '../../domain/people/User';
 import { SessionKind, SlaughterSession } from '../../domain/slaughter/SlaughterSession';
 import { newId } from '../ids';
@@ -71,6 +71,18 @@ export class SlaughterService {
     return record.crewPayment();
   }
 
+  /**
+   * Remove a session started by mistake. Not once the head count is written down:
+   * the crew has been paid, and NFR-04 keeps that record (correct it with a note instead).
+   */
+  deleteSession(sessionId: string, user: User): void {
+    this.policy.requireDirector(user);
+    const session = this.session(sessionId);
+    if (session.getHeadCount()) throw new DomainError('The head count is recorded and the crew paid. Correct the count with a note instead.');
+    if (session.isSold()) throw new DomainError('A sale is recorded for this session. Undo the sale first.');
+    this.sessions.delete(sessionId);
+  }
+
   /** FR-03: the crew's pay is a CREW expense of this batch; same id, so a correction replaces it. */
   private bookCrewPay(session: SlaughterSession, user: User): void {
     const hc = session.getHeadCount();
@@ -83,6 +95,7 @@ export class SlaughterService {
       session.getDate(),
       user,
       `exp-crew-${session.getId()}`,
+      ExpenseSource.CREW_PAY,
     );
   }
 }

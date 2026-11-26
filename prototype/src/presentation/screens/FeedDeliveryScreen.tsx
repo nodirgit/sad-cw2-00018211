@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { FeedDeliveryResult } from '../../application/services/FeedService';
+import type { FeedDelivery } from '../../domain/feed/FeedDelivery';
 import { useUser } from '../AppContext';
 import { HousePicker, useDefaultHouse } from '../components/HousePicker';
 import { ErrorNotice, Notice } from '../components/Notice';
+import { EditButtons, RowActions } from '../components/RowActions';
 import { Screen } from '../components/Screen';
 import { dayMonth, num, parseNumber, uzs } from '../format';
 import { useAction } from '../useAction';
@@ -92,15 +94,9 @@ export function FeedDeliveryScreen({ houseId: initial }: { houseId?: string }) {
       {batch && (
         <div className="card">
           <h2>Deliveries to this batch</h2>
-          <div className="lines">
+          <div>
             {c.feed.deliveriesFor(batch.getId()).map((d) => (
-              <div key={d.getId()} className="line">
-                <span className="l">
-                  {dayMonth(d.getDate())} · {d.getSupplier().getName()}
-                  {canSeeMoney && <div className="tiny muted">{d.hasCost() ? uzs(d.getCost()!) : 'cost not entered'}</div>}
-                </span>
-                <span className="r">{num(d.getQuantityKg())} kg</span>
-              </div>
+              <DeliveryRow key={d.getId()} delivery={d} onChanged={() => setResult(null)} />
             ))}
           </div>
           <div className="row small" style={{ marginTop: 8 }}>
@@ -110,5 +106,77 @@ export function FeedDeliveryScreen({ houseId: initial }: { houseId?: string }) {
         </div>
       )}
     </Screen>
+  );
+}
+
+function DeliveryRow({ delivery, onChanged }: { delivery: FeedDelivery; onChanged: () => void }) {
+  const { c, user, refresh } = useUser();
+  const canSeeMoney = c.policy.canSeeMoney(user);
+  const [editing, setEditing] = useState(false);
+  const [supplierId, setSupplierId] = useState(delivery.getSupplier().getId());
+  const [kg, setKg] = useState(String(delivery.getQuantityKg()));
+  const [cost, setCost] = useState(delivery.getCost() === null ? '' : String(delivery.getCost()));
+  const { error, setError, run } = useAction();
+  const can = c.feed.canChange(delivery, user);
+
+  function open() {
+    setSupplierId(delivery.getSupplier().getId());
+    setKg(String(delivery.getQuantityKg()));
+    setCost(delivery.getCost() === null ? '' : String(delivery.getCost()));
+    setError(null);
+    setEditing(true);
+  }
+
+  function save() {
+    const money = canSeeMoney && cost.trim() ? parseNumber(cost) : null;
+    if (run(() => c.feed.editDelivery(delivery.getId(), supplierId, parseNumber(kg), money, user))) {
+      setEditing(false);
+      onChanged();
+      refresh();
+    }
+  }
+
+  function remove() {
+    if (run(() => (c.feed.deleteDelivery(delivery.getId(), user), true))) {
+      onChanged();
+      refresh();
+    }
+  }
+
+  return (
+    <div className="rec">
+      <div className="top">
+        <div className="main">
+          {dayMonth(delivery.getDate())} · {delivery.getSupplier().getName()}
+          {canSeeMoney && <div className="tiny muted">{delivery.hasCost() ? uzs(delivery.getCost()!) : 'cost not entered'}</div>}
+        </div>
+        <span className="val">{num(delivery.getQuantityKg())} kg</span>
+        {can && !editing && (
+          <RowActions
+            onEdit={open}
+            onDelete={remove}
+            confirmText={`Delete the delivery of ${num(delivery.getQuantityKg())} kg from ${delivery.getSupplier().getName()}?${delivery.hasCost() ? ' Its cost is removed from the batch too.' : ''}`}
+          />
+        )}
+      </div>
+      {!can && !canSeeMoney && delivery.hasCost() && <div className="lock">Has a cost: only the Director can change it.</div>}
+      {editing && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+          <select className="input" value={supplierId} onChange={(e) => setSupplierId(e.target.value)} aria-label="Supplier">
+            {c.feed.suppliersFor(delivery).map((s) => (
+              <option key={s.getId()} value={s.getId()}>
+                {s.getName()}
+              </option>
+            ))}
+          </select>
+          <div className="fieldrow">
+            <input className="input" inputMode="numeric" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="kg" aria-label="Quantity kg" />
+            {canSeeMoney && <input className="input" inputMode="numeric" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="cost (UZS)" aria-label="Cost" />}
+          </div>
+          <EditButtons onCancel={() => { setEditing(false); setError(null); }} onSave={save} saveDisabled={!kg} />
+        </div>
+      )}
+      <ErrorNotice error={error} />
+    </div>
   );
 }

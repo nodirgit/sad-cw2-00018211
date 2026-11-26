@@ -15,6 +15,11 @@ export class AccessPolicy {
     return this.canSeeMoney(user) ? amount : null;
   }
 
+  /** A record can be changed by the person who entered it, or by the Director. */
+  canChange(user: User, enteredBy?: User): boolean {
+    return this.canSeeMoney(user) || (enteredBy !== undefined && enteredBy.getId() === user.getId());
+  }
+
   requireDirector(user: User): void {
     if (!this.canSeeMoney(user)) throw new DomainError('Only the Director can do this.');
   }

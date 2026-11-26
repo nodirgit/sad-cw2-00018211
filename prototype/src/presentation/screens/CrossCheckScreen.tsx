@@ -52,6 +52,14 @@ export function CrossCheckScreen({ sessionId }: { sessionId?: string }) {
     }
   }
 
+  function undoSale() {
+    if (!window.confirm('Undo this sale? It is removed from the batch profit; the weights stay.')) return;
+    if (run(() => (c.crossCheck.undoSale(session!.getId(), user), true))) {
+      setSold(null);
+      refresh();
+    }
+  }
+
   function recordSale() {
     const sale = run(() => c.crossCheck.recordSale(session!.getId(), new BazaarAgent('Bazaar Agent (Navoi bazaar)'), parseNumber(price), user));
     if (sale) {
@@ -108,7 +116,13 @@ export function CrossCheckScreen({ sessionId }: { sessionId?: string }) {
       <div className="card">
         <h2>Sale to the Bazaar Agent</h2>
         {session.isSold() ? (
-          <Notice kind="ok" title="Sale recorded">{sold ?? `This session's sale is in ${houseName}'s batch profit.`}</Notice>
+          <>
+            <Notice kind="ok" title="Sale recorded">{sold ?? `This session's sale is in ${houseName}'s batch profit.`}</Notice>
+            <button className="btn btn-danger" style={{ marginTop: 10 }} onClick={undoSale}>
+              Undo sale
+            </button>
+            <p className="tiny muted">Undo removes the sale from the batch profit so the weights or price can be corrected and the sale recorded again.</p>
+          </>
         ) : (
           <>
             <div className="field">

@@ -83,6 +83,9 @@ await click('Save');
 await shot('log-death-saved');
 await click('Save');
 await shot('log-death-duplicate', true);
+await click('Edit');
+await shot('log-death-edit', true);
+await click('Cancel');
 await click('‹ Back');
 
 // FR-02: feed delivery with cost
@@ -125,12 +128,14 @@ await shot('crosscheck-sold', true);
 await click('‹ Back');
 await click('‹ Back');
 
-// FR-06: voice entry, understood and unsure
-await click('Voice entry');
+// FR-03 / FR-06: expense entry — typed form, voice helper fills it, unsure fields amber
+await click('Expense entry');
+await shot('expense-entry', true);
+await click('Fill the form by voice');
 await click('Kecha veterinarga 150 ming');
-await shot('voice-understood', true);
+await shot('expense-voice-filled', true);
 await click('Bir narsa oldim');
-await shot('voice-flagged', true);
+await shot('expense-voice-unsure', true);
 await click('‹ Back');
 
 // FR-03: batch profit, both houses
@@ -141,9 +146,21 @@ await top();
 await shot('profit-house-2', true);
 await click('‹ Back');
 
-// NFR-05 / FR-07: settings
+// NFR-05 / FR-07: settings, grouped like a phone's settings
 await click('Settings');
 await shot('settings', true);
+await click('Houses');
+await shot('settings-houses', true);
+await click('House 2');
+await shot('settings-house', true);
+await click('‹ Back');
+await click('Add a house');
+await shot('settings-add-house', true);
+await click('‹ Back');
+await click('‹ Back');
+await click('Suppliers');
+await shot('settings-suppliers', true);
+await click('‹ Back');
 await click('‹ Back');
 
 // NFR-03: worker sees no money

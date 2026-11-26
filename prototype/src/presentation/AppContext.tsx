@@ -10,8 +10,13 @@ export type Route =
   | { name: 'profit' }
   | { name: 'slaughter' }
   | { name: 'crosscheck'; sessionId?: string }
-  | { name: 'voice' }
-  | { name: 'settings' };
+  | { name: 'expense'; editId?: string }
+  | { name: 'settings' }
+  | { name: 'settings-houses' }
+  | { name: 'settings-house'; houseId: string }
+  | { name: 'settings-house-new' }
+  | { name: 'settings-suppliers' }
+  | { name: 'settings-demo' };
 
 export interface AppState {
   c: Container;

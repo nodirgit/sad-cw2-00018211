@@ -6,7 +6,7 @@ The brief: **max 1 minute**, the running application. Without the video the high
 
 1. `cd prototype`, `npm run dev`, open http://localhost:5173 in Chrome or Edge.
 2. Press **F12 → device toolbar (Ctrl+Shift+M) → 390 × 844** so it looks like a phone. Close the DevTools panel itself if your recorder captures the whole window, or record only the page area.
-3. Log in as Director (1234) → Settings → **Reset demo data** (fresh data, and the light switch counter starts again). You are back on the login screen.
+3. Log in as Director (1234) → Settings → Demo data → **Reset demo data** (fresh data, and the light switch counter starts again). You are back on the login screen.
 4. Recorder: Bandicam or Xbox Game Bar (**Win + Alt + R** starts/stops). Practise the path once; total ≈ 55 s.
 
 ## Path
@@ -21,7 +21,7 @@ The brief: **max 1 minute**, the running application. Without the video the high
 | 46–53 s | Back, Back → **Batch profit** → tap **House 2** tile | "Profit per batch, each house on its own schedule." (FR-03) |
 | 53–60 s | Back → **Log out** → Worker 1 → **1111** → home (no money, two actions) | "Workers see no costs or profit." (NFR-03) |
 
-If there is time to spare, swap the profit step for **Voice entry → tap "Kecha veterinarga 150 ming, dori uchun"** (FR-06).
+If there is time to spare, swap the profit step for **Expense entry → Fill the form by voice → tap "Kecha veterinarga 150 ming, dori uchun"** (FR-06).
 
 ## After recording
 
