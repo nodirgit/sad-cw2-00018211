@@ -49,6 +49,7 @@ export function FeedDeliveryScreen({ houseId: initial }: { houseId?: string }) {
 
       <div className="field">
         <label>Supplier</label>
+        {suppliers.length === 0 && <span className="hint">No feed suppliers. The Director adds them in Settings.</span>}
         <div className="list-pick">
           {suppliers.map((s) => (
             <div key={s.getId()} className="seg">

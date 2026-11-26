@@ -27,7 +27,7 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | 19 unit tests of the business rules (Vitest) |
+| `npm test` | 22 unit tests of the business rules (Vitest) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run build` | production build into `dist/` |
 | `npm run screenshots` | with `npm run dev` running: clicks through every screen in Chrome/Edge and saves `screenshots/*.png` |
@@ -45,7 +45,7 @@ Other commands:
 | Slaughter session | FR-04, NFR-04 | head count + rate → crew payment shown at once; "Correct count" needs a note and keeps the history |
 | Agent cross-check | FR-05 | agent's kg (Telegram photo) vs Trusted Representative's kg → PENDING / MATCH / MISMATCH; *Record sale* only on MATCH |
 | Voice entry | FR-06 | microphone (Web Speech API, Uzbek) or text → amount, date, category, reason; anything unsure is amber and must be confirmed before saving |
-| Settings | FR-07, NFR-05 | normal range per house, **add a house** (name + capacity) and start its batch, reset demo data |
+| Settings | FR-07, NFR-05 | normal range per house; **add, edit and delete houses** (name + capacity; delete only with no open batch), start / close a batch; **add, rename and delete suppliers** (deleted suppliers are archived so past deliveries keep their name); reset demo data |
 | Flock density tile | FR-09 | disabled: "coming later (needs camera analytics)" |
 
 Screenshots of every screen are in [`screenshots/`](screenshots).

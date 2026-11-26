@@ -125,6 +125,7 @@ body {
 .btn-primary { background: var(--green); color: var(--green-ink); }
 .btn-secondary { background: var(--card); color: var(--ink); border-color: var(--line); }
 .btn-warn { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-line); }
+.btn-danger { background: var(--card); color: var(--red); border-color: var(--red); }
 .btn-small { min-height: 44px; font-size: 16px; width: auto; }
 .btn-huge { min-height: 64px; font-size: 20px; }
 

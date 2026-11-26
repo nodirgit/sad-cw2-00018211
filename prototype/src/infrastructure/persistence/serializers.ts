@@ -53,8 +53,8 @@ export const farmSerializer: Serializer<Farm> = {
 };
 
 export const supplierSerializer: Serializer<Supplier> = {
-  toRecord: (s) => ({ id: s.getId(), name: s.getName(), type: s.getType() }),
-  fromRecord: (r) => new Supplier(r.id, r.name, r.type as SupplierType),
+  toRecord: (s) => ({ id: s.getId(), name: s.getName(), type: s.getType(), active: s.isActive() }),
+  fromRecord: (r) => new Supplier(r.id, r.name, r.type as SupplierType, r.active !== false),
 };
 
 export function mortalitySerializer(users: Repository<User>): Serializer<MortalityRecord> {

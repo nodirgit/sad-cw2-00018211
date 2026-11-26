@@ -64,6 +64,21 @@ export class FarmService {
     return house;
   }
 
+  /** NFR-05: rename a house or change its capacity. */
+  editHouse(houseId: string, name: string, capacity: number, user: User): House {
+    this.policy.requireDirector(user);
+    const house = this.farm().editHouse(houseId, name, capacity);
+    this.save();
+    return house;
+  }
+
+  /** NFR-05: remove a house with no open batch. */
+  removeHouse(houseId: string, user: User): void {
+    this.policy.requireDirector(user);
+    this.farm().removeHouse(houseId);
+    this.save();
+  }
+
   startBatch(houseId: string, chicksPlaced: number, startDate: Date, user: User): Batch {
     this.policy.requireDirector(user);
     const batch = this.house(houseId).placeBatch(newId('batch'), startDate, chicksPlaced);

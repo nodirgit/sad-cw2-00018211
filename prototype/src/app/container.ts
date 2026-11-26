@@ -3,6 +3,7 @@ import { AuthService } from '../application/services/AuthService';
 import { BatchProfitService } from '../application/services/BatchProfitService';
 import { CrossCheckService } from '../application/services/CrossCheckService';
 import { FarmService } from '../application/services/FarmService';
+import { SupplierService } from '../application/services/SupplierService';
 import { FeedService } from '../application/services/FeedService';
 import { LightingService } from '../application/services/LightingService';
 import { MonitoringService } from '../application/services/MonitoringService';
@@ -51,6 +52,7 @@ export function buildContainer(storage: Storage = window.localStorage) {
   const farm = new FarmService(farms, policy);
   const mortality = new MortalityService(deaths, farm);
   const profit = new BatchProfitService(finance, farm, policy);
+  const supplierService = new SupplierService(suppliers, policy);
   const feedService = new FeedService(feed, suppliers, farm, mortality, profit, policy);
   const slaughter = new SlaughterService(sessions, farm, profit, policy);
   const crossCheck = new CrossCheckService(sessions, profit, policy);
@@ -63,6 +65,7 @@ export function buildContainer(storage: Storage = window.localStorage) {
     policy,
     farm,
     mortality,
+    suppliers: supplierService,
     feed: feedService,
     profit,
     slaughter,

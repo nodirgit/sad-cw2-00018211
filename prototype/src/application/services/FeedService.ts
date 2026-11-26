@@ -42,7 +42,7 @@ export class FeedService {
   }
 
   feedSuppliers(): Supplier[] {
-    return this.suppliers.findAll().filter((s) => s.getType() === SupplierType.FEED);
+    return this.suppliers.findAll().filter((s) => s.isActive() && s.getType() === SupplierType.FEED);
   }
 
   /**
@@ -51,7 +51,7 @@ export class FeedService {
    */
   recordDelivery(houseId: string, supplierId: string, quantityKg: number, cost: number | null, user: User, date: Date = new Date()): FeedDeliveryResult {
     const supplier = this.suppliers.findById(supplierId);
-    if (!supplier) throw new DomainError('Pick a supplier.');
+    if (!supplier || !supplier.isActive()) throw new DomainError('Pick a supplier.');
     if (cost !== null && !this.policy.canSeeMoney(user)) throw new DomainError('Only the Director enters feed costs.');
     const batch = this.farm.openBatch(houseId);
     const delivery = new FeedDelivery(newId('feed'), batch.getId(), supplier, date, quantityKg, cost);

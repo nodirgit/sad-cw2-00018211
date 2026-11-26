@@ -8,8 +8,8 @@ import { Batch } from './Batch';
  */
 export class House {
   private readonly id: string;
-  private readonly name: string;
-  private readonly capacity: number;
+  private name: string;
+  private capacity: number;
   private lightOn: boolean;
   private thresholds: ThresholdRange;
   private readonly batches: Batch[];
@@ -65,6 +65,22 @@ export class House {
     const batch = new Batch(batchId, this.id, startDate, chicksPlaced);
     this.batches.push(batch);
     return batch;
+  }
+
+  /** NFR-05: the director corrects the name (uniqueness is checked by the Farm). */
+  rename(name: string): void {
+    if (!name.trim()) throw new DomainError('A house needs a name.');
+    this.name = name.trim();
+  }
+
+  /** NFR-05: capacity is configuration too, but never below the birds already placed. */
+  setCapacity(capacity: number): void {
+    if (!Number.isInteger(capacity) || capacity <= 0) throw new DomainError('Capacity must be a whole number above 0.');
+    const open = this.currentBatch();
+    if (open && open.getChicksPlaced() > capacity) {
+      throw new DomainError(`${this.name} already holds a batch of ${open.getChicksPlaced().toLocaleString('en-US')} chicks.`);
+    }
+    this.capacity = capacity;
   }
 
   /** FR-08: only called once the light controller has confirmed the change. */

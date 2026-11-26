@@ -7,6 +7,8 @@ import { FeedService } from '../src/application/services/FeedService';
 import { LightingService } from '../src/application/services/LightingService';
 import { MonitoringService } from '../src/application/services/MonitoringService';
 import { MortalityService } from '../src/application/services/MortalityService';
+import { SupplierService } from '../src/application/services/SupplierService';
+import { SupplierType } from '../src/domain/feed/Supplier';
 import { SlaughterService } from '../src/application/services/SlaughterService';
 import { DomainError } from '../src/domain/DomainError';
 import { BazaarAgent, NurataSeller } from '../src/domain/finance/Buyer';
@@ -169,5 +171,44 @@ describe('NFR-05 houses by configuration', () => {
     expect(s.farm.houses()).toHaveLength(3);
     expect(s.mortality.logDeath(h.getId(), 2, worker1).record.getHouseId()).toBe(h.getId());
     expect(() => s.farm.addHouse('House 4', 5000, worker1)).toThrow('Only the Director');
+  });
+
+  it('edits a house: rename, capacity not below the birds placed, names unique', () => {
+    const s = setup();
+    const h = s.farm.editHouse('house-2', 'Small house', 7000, director);
+    expect(h.getName()).toBe('Small house');
+    expect(s.farm.house('house-2').getCapacity()).toBe(7000);
+    expect(() => s.farm.editHouse('house-2', 'Small house', 5000, director)).toThrow(DomainError); // 6,000 chicks placed
+    expect(() => s.farm.editHouse('house-2', 'House 1', 7000, director)).toThrow('already a house');
+    expect(() => s.farm.editHouse('house-2', 'X', 7000, worker1)).toThrow('Only the Director');
+  });
+
+  it('deletes a house only without an open batch', () => {
+    const s = setup();
+    expect(() => s.farm.removeHouse('house-2', director)).toThrow('Close the batch first');
+    s.farm.closeBatch('house-2', director);
+    s.farm.removeHouse('house-2', director);
+    expect(s.farm.houses().map((h) => h.getId())).toEqual(['house-1']);
+    s.farm.closeBatch('house-1', director);
+    expect(() => s.farm.removeHouse('house-1', director)).toThrow('at least one house');
+  });
+});
+
+describe('NFR-05 suppliers by configuration', () => {
+  it('adds, renames and removes suppliers; past deliveries keep the name', () => {
+    const s = setup();
+    const suppliers = new SupplierService(s.repos.suppliers, new AccessPolicy());
+    const c = suppliers.addSupplier('Demo Feed Factory C', SupplierType.FEED, director);
+    expect(s.feed.feedSuppliers().map((x) => x.getName())).toContain('Demo Feed Factory C');
+    expect(() => suppliers.addSupplier('demo feed factory a', SupplierType.FEED, director)).toThrow('already a supplier');
+    expect(() => suppliers.addSupplier('X', SupplierType.FEED, worker1)).toThrow('Only the Director');
+
+    suppliers.renameSupplier(c.getId(), 'Demo Feed Factory C (Navoi)', director);
+    const { delivery } = s.feed.recordDelivery('house-1', c.getId(), 1000, null, worker1);
+    suppliers.removeSupplier(c.getId(), director);
+
+    expect(s.feed.feedSuppliers().map((x) => x.getId())).not.toContain(c.getId());
+    expect(delivery.getSupplier().getName()).toBe('Demo Feed Factory C (Navoi)');
+    expect(() => s.feed.recordDelivery('house-1', c.getId(), 500, null, worker1)).toThrow('Pick a supplier');
   });
 });
