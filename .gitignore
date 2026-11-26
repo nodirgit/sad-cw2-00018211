@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.log
 diagrams/tools/
+submission/
+*.mp4
