@@ -1,29 +1,46 @@
-# 60-second screencast — click path
+# 60-second screencast on a phone — set-up and click path
 
-The brief: **max 1 minute**, the running application. Without the video the high-fidelity mark is lost (−35).
+The brief: **max 1 minute** of the running application. Without the video the high-fidelity mark is lost (−35).
+The app is built phone-first, so it is recorded on a real phone.
 
-## Before recording
+## 1. Start the app on the laptop
 
-1. `cd prototype`, `npm run dev`, open http://localhost:5173 in Chrome or Edge.
-2. Press **F12 → device toolbar (Ctrl+Shift+M) → 390 × 844** so it looks like a phone. Close the DevTools panel itself if your recorder captures the whole window, or record only the page area.
-3. Log in with 1234 (Director) → **Profile** (bottom bar) → Demo data → **Reset demo data** (fresh data, and the light switch counter starts again). You are back on the login screen.
-4. Recorder: Bandicam or Xbox Game Bar (**Win + Alt + R** starts/stops). Practise the path once; total ≈ 55 s.
+1. PowerShell: `cd D:\SAD_CW2\prototype` → `npm run dev`.
+2. Read the **Network:** lines it prints. Several may show (VPN, virtual adapters); use the one that starts with **`192.168.`** — the home Wi-Fi — e.g. `http://192.168.1.19:5173`. The `Local:` one only works on the laptop.
+3. If Windows Firewall asks about Node.js, allow it on **private** networks only.
 
-## Path
+## 2. Open it on the phone
 
-| Time | Do | Say / caption (optional) |
+1. The phone must be on the **same Wi-Fi** as the laptop.
+2. Open the Network URL in Chrome (Android) or Safari (iPhone).
+3. Optional, looks cleaner: browser menu → **Add to Home screen**, then open it from the home screen icon (full screen, no address bar).
+4. **Voice does not work on the phone** (the browser blocks the microphone on plain `http`), so the path below does not use it.
+
+## 3. Before each take
+
+1. Log in with **1234** → **Profile** (bottom bar) → **Demo data** → **Reset demo data**. You are back on the login screen with fresh data, and the light switch counter starts again (every 4th light command fails on purpose to show FR-08's "Not confirmed").
+2. Start the screen recorder:
+   - Android: pull down quick settings → **Screen record** (no audio needed).
+   - iPhone: Control Centre → **Screen Recording** (add it in Settings → Control Centre if missing).
+3. Practise the path once before the real take.
+
+## 4. Path (≤ 55 s)
+
+Measured at a steady pace on a 390 × 844 screen: **about 39 s**; with the phone keyboard opening and closing, expect 50–55 s. Do not rush the two moments that matter: the duplicate warning and MATCH.
+
+| Time | Do | What it shows |
 |---|---|---|
-| 0–6 s | type **1234** → Main | "The Director logs in with their PIN alone." |
-| 6–14 s | Point at House 2's **red "Too hot"** reading; tap **Turn on** on House 2 → "Switching…" → **Lights ON** | "Live temperature and humidity per house; alert outside the range. Lights switched remotely, with confirmation." (FR-07, FR-08) |
-| 14–22 s | **Log death** → **Save** → **Save** again → amber **Possible duplicate — not counted twice** | "A death logged twice is flagged, not double counted." (FR-01) |
-| 22–34 s | **Slaughter** (bottom bar) → **Start tonight's session** → count **1100** → **Record count** → big **Pay the crew** figure; New count **1080**, note "recount" → **Save correction** → history shows both | "Head count gives the crew's pay at once; a recount is a correction with a note." (FR-04, NFR-04) |
-| 34–46 s | **Bazaar weights cross-check →** → agent **2376** → Save → **PENDING** (Record sale disabled) → representative **2376** → Save → **MATCH** → **Record sale** | "No sale from one unconfirmed figure; only a match records it." (FR-05) |
-| 46–53 s | **Main** (bottom bar) → **Batch profit** → tap **House 2** tile | "Profit per batch, each house on its own schedule." (FR-03) |
-| 53–60 s | **Profile** → **Log out** → type **1111** (Worker 1) → Main (no money, two actions, only Main and Profile in the bar) | "Workers see no costs or profit." (NFR-03) |
+| 0–4 s | Type **1234** | PIN login, the PIN alone says who you are (NFR-03) |
+| 4–10 s | Point at House 2's red **Too hot**; tap **Turn on** on House 2 → "Switching…" → **Lights ON** | Live climate with an alert outside the house's range (FR-07); remote light with confirmation (FR-08) |
+| 10–16 s | On House 1 tap **+ Death** → **Save** → **Save** again → amber **Possible duplicate — not counted twice** | A death reported twice is not double counted (FR-01) |
+| 16–29 s | **Slaughter** (bottom bar) → **Start tonight's session** → count **1100** → **Record count** → **Pay the crew** figure; New count **1080**, why **recount** → **Save correction** | Head count gives the crew's pay at once; a recount is a correction with a note, history kept (FR-04, NFR-04) |
+| 29–43 s | **Bazaar weights cross-check →** → agent **2376** → **Save** → **PENDING** (Record sale disabled) → representative **2376** → **Save** → **MATCH** → **Record sale** | No sale from one unconfirmed figure; only a match records it (FR-05) |
+| 43–55 s | **Profile** → **Log out** → type **1111** → Worker's Main | A worker sees no money: only Main and Profile in the bottom bar, two actions (NFR-03) |
 
-If there is time to spare, swap the profit step for **Expenses (bottom bar) → Fill the form by voice → tap "Kecha veterinarga 150 ming, dori uchun"** (FR-06).
+Batch profit, expenses, partners and settings are **not** in the video; they are in the report's screenshots.
 
-## After recording
+## 5. After recording
 
-- Check it is ≤ 60 s. Upload (YouTube unlisted / Google Drive "anyone with the link") and put the link in the vault's STATUS.md and in the report.
-- The light switch: each page load, the **4th** command returns "Not confirmed" on purpose (FR-08 edge case). Reset or reload before recording so the first toggles confirm.
+1. Trim to **≤ 60 s** (Android: Photos/Gallery → Edit → Trim; iPhone: Photos → Edit → drag the ends).
+2. Name the file `SAD_CW2_00018211_video.mp4` and copy it to `D:\SAD_CW2\submission\materials\` (the folder is not in git; videos never go into git).
+3. It is uploaded with the other materials to Google Drive ("anyone with the link can view"); the link goes into the report.

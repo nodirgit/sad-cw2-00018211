@@ -95,6 +95,7 @@ src/
                      FeedService, PartnerService, ExpenseCategoryService, BatchProfitService, SlaughterService, CrossCheckService, VoiceEntryService,
                      MonitoringService, LightingService
   domain/            entities, value objects, enums, abstract classes — no React, no storage
+    DatePeriod, DomainError   shared value object and error type
     people/          User (abstract), Director, Worker
     farm/            Farm ◆ House ◆ Batch, BatchStatus, MortalityRecord
     partners/        Partner (abstract) ← Buyer (+ BuyerGroup), Supplier (+ SupplierType); PartnerDetails (TIN, contacts)
