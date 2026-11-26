@@ -1,0 +1,221 @@
+@startuml detail-a
+' Figure 2.2a — Detailed class diagram, part 1: people, farm, partners, feed (+ repository realization)
+' Every class and member below exists in prototype/src with the same name and type.
+' Nullable types are written as UML multiplicity [0..1]; T[] / readonly T[] as T[*].
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam classFontStyle bold
+skinparam nodesep 30
+skinparam ranksep 45
+hide circle
+
+title Figure 2.2a — Detailed class diagram: people, farm, partners and feed
+
+abstract class User {
+  # id: string
+  # name: string
+  # pin: string
+  + getId(): string
+  + getName(): string
+  + checkPin(pin: string): boolean
+  + {abstract} canViewFinancials(): boolean
+  + {abstract} roleName(): string
+}
+
+class Director {
+  + canViewFinancials(): boolean
+  + roleName(): string
+}
+
+class Worker {
+  + canViewFinancials(): boolean
+  + roleName(): string
+}
+
+class Farm {
+  - id: string
+  - name: string
+  - houses: House[*]
+  + getId(): string
+  + getName(): string
+  + getHouses(): House[*]
+  + findHouse(houseId: string): House [0..1]
+  + addHouse(name: string, capacity: number): House
+  + editHouse(houseId: string, name: string, capacity: number): House
+  + removeHouse(houseId: string): void
+  - requireHouse(houseId: string): House
+  - checkNameFree(name: string, exceptHouseId: string): void
+}
+
+class House {
+  - id: string
+  - name: string
+  - capacity: number
+  - lightOn: boolean
+  - thresholds: ThresholdRange
+  - batches: Batch[*]
+  + getId(): string
+  + getName(): string
+  + getCapacity(): number
+  + isLightOn(): boolean
+  + getThresholds(): ThresholdRange
+  + getBatches(): Batch[*]
+  + currentBatch(): Batch [0..1]
+  + findBatch(batchId: string): Batch [0..1]
+  + placeBatch(batchId: string, startDate: Date, chicksPlaced: number): Batch
+  + rename(name: string): void
+  + setCapacity(capacity: number): void
+  + correctBatch(chicksPlaced: number, startDate: Date): Batch
+  + reopenLastBatch(): Batch
+  + setLight(on: boolean): void
+  + setThresholds(range: ThresholdRange): void
+}
+
+class Batch {
+  - id: string
+  - houseId: string
+  - startDate: Date
+  - chicksPlaced: number
+  - status: BatchStatus = OPEN
+  + getId(): string
+  + getHouseId(): string
+  + getStartDate(): Date
+  + getChicksPlaced(): number
+  + getStatus(): BatchStatus
+  + ageInDays(today: Date): number
+  + isOpen(): boolean
+  + startSlaughter(): void
+  + close(): void
+  + reopen(): void
+  + correctPlacement(chicksPlaced: number, startDate: Date): void
+}
+
+enum BatchStatus <<enumeration>> {
+  OPEN
+  SLAUGHTERING
+  CLOSED
+}
+
+class MortalityRecord {
+  - id: string
+  - batchId: string
+  - houseId: string
+  - timestamp: Date
+  - count: number
+  - loggedBy: User
+  - flaggedDuplicate: boolean = false
+  + getId(): string
+  + getBatchId(): string
+  + getHouseId(): string
+  + getTimestamp(): Date
+  + getCount(): number
+  + getLoggedBy(): User
+  + isFlaggedDuplicate(): boolean
+  + isCounted(): boolean
+  + looksLikeDuplicateOf(other: MortalityRecord, windowMs: number): boolean
+  + changeCount(count: number): void
+  + flagAsDuplicate(): void
+  + confirmSeparate(): void
+}
+
+abstract class Partner {
+  # id: string
+  # name: string
+  # active: boolean = true
+  # details: PartnerDetails
+  + getId(): string
+  + getName(): string
+  + getDetails(): PartnerDetails
+  + update(name: string, details: PartnerDetails): void
+  + isActive(): boolean
+  + archive(): void
+  + {abstract} groupLabel(): string
+  - {static} clean(name: string): string
+}
+
+class Buyer {
+  - group: BuyerGroup
+  + getGroup(): BuyerGroup
+  + requiresCrossCheck(): boolean
+  + groupLabel(): string
+}
+
+enum BuyerGroup <<enumeration>> {
+  BAZAAR_AGENT
+  RESELLER
+  SHOP
+  CLIENT
+}
+
+class Supplier {
+  - type: SupplierType
+  + getType(): SupplierType
+  + groupLabel(): string
+}
+
+class FeedDelivery {
+  - id: string
+  - batchId: string
+  - supplier: Supplier
+  - date: Date
+  - quantityKg: number
+  - cost: number [0..1]
+  + getId(): string
+  + getBatchId(): string
+  + getSupplier(): Supplier
+  + getDate(): Date
+  + getQuantityKg(): number
+  + getCost(): number [0..1]
+  + hasCost(): boolean
+}
+
+interface "Repository<T>" as Repository <<interface>> {
+  + findAll(): T[*]
+  + findById(id: string): T [0..1]
+  + save(item: T): void
+  + delete(id: string): void
+}
+
+class "LocalStorageRepository<T>" as LocalStorageRepository {
+  - key: string
+  - serializer: Serializer<T>
+  - storage: Storage
+  - cache: Map<string, T> [0..1]
+  + findAll(): T[*]
+  + findById(id: string): T [0..1]
+  + save(item: T): void
+  + delete(id: string): void
+  - write(): void
+  - load(): Map<string, T>
+}
+
+' ---------- Generalization
+User <|-- Director
+User <|-- Worker
+Partner <|-- Buyer
+Partner <|-- Supplier
+
+' ---------- Realization
+Repository <|.. LocalStorageRepository
+
+' ---------- Composition (parts exist only inside the whole)
+Farm "1" *-- "1..*" House : houses
+House "1" *-- "0..*" Batch : batches
+
+' ---------- Aggregation (the supplier lives on without the delivery)
+FeedDelivery "0..*" o-- "1" Supplier : supplier
+
+' ---------- Association
+MortalityRecord "0..*" --> "1" User : loggedBy
+MortalityRecord "0..*" --> "1" Batch : batchId
+FeedDelivery "0..*" --> "1" Batch : batchId
+
+' ---------- Dependency (attribute / parameter types)
+Batch ..> BatchStatus
+Buyer ..> BuyerGroup
+
+@enduml

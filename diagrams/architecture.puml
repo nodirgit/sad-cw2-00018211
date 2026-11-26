@@ -1,0 +1,194 @@
+@startuml architecture
+' Figure 2.1 — Overall architecture of the Parranda Farm prototype (D:\SAD_CW2\prototype\src)
+' Layered: presentation -> application -> domain; infrastructure realizes the application ports (DIP);
+' app/container is the composition root that wires infrastructure into the application.
+!pragma layout elk
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam padding 2
+hide empty members
+hide circle
+
+title Figure 2.1 — Overall architecture: layers, domain sub-packages, main classes and how they interact
+
+package "presentation  (React screens and components)" as presentation {
+  class App
+  class TabBar
+  class LoginScreen
+  class DirectorHome
+  class WorkerHome
+  class LogDeathScreen
+  class FeedDeliveryScreen
+  class SlaughterScreen
+  class CrossCheckScreen
+  class SalesScreen
+  class DirectSaleScreen
+  class ExpenseEntryScreen
+  class BatchProfitScreen
+  class ProfileScreen
+  class PartnersScreen
+  class SettingsScreen
+  App -[hidden]down- LoginScreen
+  LoginScreen -[hidden]down- DirectorHome
+  DirectorHome -[hidden]down- WorkerHome
+  TabBar -[hidden]down- LogDeathScreen
+  LogDeathScreen -[hidden]down- FeedDeliveryScreen
+  FeedDeliveryScreen -[hidden]down- SlaughterScreen
+  CrossCheckScreen -[hidden]down- SalesScreen
+  SalesScreen -[hidden]down- DirectSaleScreen
+  DirectSaleScreen -[hidden]down- ExpenseEntryScreen
+  BatchProfitScreen -[hidden]down- ProfileScreen
+  ProfileScreen -[hidden]down- PartnersScreen
+  PartnersScreen -[hidden]down- SettingsScreen
+}
+
+package "app" {
+  class "container" as container <<composition root>> {
+    + buildContainer(storage: Storage)
+  }
+}
+
+package "application" {
+  package "services  (one responsibility each)" as services {
+    class AuthService <<NFR-03>>
+    class AccessPolicy <<NFR-03>>
+    class FarmService <<NFR-05>>
+    class PartnerService <<NFR-05>>
+    class MortalityService <<FR-01, NFR-02>>
+    class FeedService <<FR-02>>
+    class ExpenseCategoryService <<NFR-05>>
+    class VoiceEntryService <<FR-06>>
+    class BatchProfitService <<FR-03>>
+    class SlaughterService <<FR-04, NFR-04>>
+    class CrossCheckService <<FR-05>>
+    class MonitoringService <<FR-07, NFR-01>>
+    class LightingService <<FR-08>>
+    AuthService -[hidden]down- AccessPolicy
+    AccessPolicy -[hidden]down- FarmService
+    FarmService -[hidden]down- PartnerService
+    MortalityService -[hidden]down- FeedService
+    FeedService -[hidden]down- ExpenseCategoryService
+    ExpenseCategoryService -[hidden]down- VoiceEntryService
+    BatchProfitService -[hidden]down- SlaughterService
+    SlaughterService -[hidden]down- CrossCheckService
+    MonitoringService -[hidden]down- LightingService
+  }
+  package "ports  (interfaces the services depend on)" as ports {
+    interface "Repository<T>" as Repository <<interface>> {
+      + findAll(): T[]
+      + findById(id: string): T
+      + save(item: T): void
+      + delete(id: string): void
+    }
+    interface SensorProvider <<interface>> {
+      + latest(houseId: string): SensorReading
+    }
+    interface LightController <<interface>> {
+      + setLight(houseId: string, on: boolean)
+    }
+    interface VoiceParser <<interface>> {
+      + parse(utterance: string, today: Date): ParsedEntry
+    }
+    interface SpeechRecognizer <<interface>> {
+      + listen(): Promise<string>
+    }
+    SensorProvider -[hidden]down- LightController
+    VoiceParser -[hidden]down- SpeechRecognizer
+  }
+}
+
+package "domain  (business rules; no React, no storage)" as domain {
+  package "people" {
+    abstract class User
+    class Director
+    class Worker
+  }
+  package "farm" {
+    class Farm
+    class House
+    class Batch
+    class MortalityRecord
+  }
+  package "partners" {
+    abstract class Partner
+    class Buyer
+    class Supplier
+    class PartnerDetails
+  }
+  package "feed" {
+    class FeedDelivery
+  }
+  package "finance" {
+    abstract class FinancialEntry
+    class Expense
+    class Sale
+    class CustomCategory
+  }
+  package "slaughter" {
+    class SlaughterSession
+    class HeadCountRecord
+    class WeightTally
+  }
+  package "environment" {
+    class SensorReading
+    class ThresholdRange
+  }
+  package "voice" {
+    class ParsedEntry
+  }
+  people -[hidden]down- partners
+  farm -[hidden]down- finance
+  feed -[hidden]down- slaughter
+  environment -[hidden]down- voice
+}
+
+package "infrastructure  (implements the ports)" as infrastructure {
+  package "persistence" {
+    class "LocalStorageRepository<T>" as LocalStorageRepository
+    class "InMemoryRepository<T>" as InMemoryRepository
+  }
+  package "devices (simulated)" as devices {
+    class SimulatedSensorProvider
+    class SimulatedLightController
+    class BrowserSpeechRecognizer
+  }
+  package "voice " as ivoice {
+    class RuleBasedVoiceParser
+  }
+  package "demo" {
+    class DemoSeeder
+  }
+}
+
+' --- presentation talks to the application services only
+presentation ..> services : calls
+App ..> container : gets the services
+
+' --- application: services depend on abstractions (ports) and use the domain
+services ..> ports : depend on
+services ..> domain : use
+
+' --- infrastructure realizes the ports (Dependency Inversion)
+Repository <|.. LocalStorageRepository
+Repository <|.. InMemoryRepository
+SensorProvider <|.. SimulatedSensorProvider
+LightController <|.. SimulatedLightController
+SpeechRecognizer <|.. BrowserSpeechRecognizer
+VoiceParser <|.. RuleBasedVoiceParser
+
+' --- the composition root is the only place that picks concrete classes
+container ..> services : wires
+container ..> infrastructure : creates
+
+note right of devices
+  Simulated today; real sensors and relays
+  replace these classes behind the same
+  interfaces, with no change to services.
+end note
+
+@enduml

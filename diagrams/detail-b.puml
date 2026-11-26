@@ -1,0 +1,170 @@
+@startuml detail-b
+' Figure 2.2b — Detailed class diagram, part 2: money and slaughter (+ the cross-check service)
+' Every class and member below exists in prototype/src with the same name and type.
+' Batch, Buyer, User and Repository<T> are detailed in Figure 2.2a and repeated here by name only.
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam classFontStyle bold
+skinparam nodesep 30
+skinparam ranksep 45
+hide circle
+
+title Figure 2.2b — Detailed class diagram: money, slaughter and the agent cross-check
+
+abstract class FinancialEntry {
+  # id: string
+  # batchId: string
+  # date: Date
+  # amount: number
+  + getId(): string
+  + getBatchId(): string
+  + getDate(): Date
+  + getAmount(): number
+  + {abstract} signedAmount(): number
+  + {abstract} describe(): string
+}
+
+class Expense {
+  - category: ExpenseCategory
+  - note: string
+  - source: ExpenseSource = MANUAL
+  - customCategory: CustomCategory [0..1]
+  + getCategory(): ExpenseCategory
+  + getCustomCategory(): CustomCategory [0..1]
+  + categoryLabel(): string
+  + getNote(): string
+  + getSource(): ExpenseSource
+  + isLinked(): boolean
+  + signedAmount(): number
+  + describe(): string
+}
+
+class Sale {
+  - buyer: Buyer
+  - kg: number
+  - pricePerKg: number
+  + getBuyer(): Buyer
+  + getKg(): number
+  + getPricePerKg(): number
+  + signedAmount(): number
+  + describe(): string
+}
+
+class SlaughterSession {
+  - id: string
+  - batchId: string
+  - date: Date
+  - kind: SessionKind
+  - headCount: HeadCountRecord [0..1]
+  - tally: WeightTally
+  - saleId: string [0..1]
+  + getId(): string
+  + getBatchId(): string
+  + getDate(): Date
+  + getKind(): SessionKind
+  + getHeadCount(): HeadCountRecord [0..1]
+  + getTally(): WeightTally
+  + getSaleId(): string [0..1]
+  + recordHeadCount(count: number, ratePerHead: number, at: Date): HeadCountRecord
+  + correctHeadCount(newCount: number, note: string, at: Date): HeadCountRecord
+  + isSold(): boolean
+  + markSold(saleId: string): void
+  + clearSale(): void
+}
+
+class HeadCountRecord {
+  - reportedCount: number
+  - ratePerHead: number
+  - recordedAt: Date
+  - corrections: HeadCountCorrection[*]
+  + getReportedCount(): number
+  + getRatePerHead(): number
+  + getRecordedAt(): Date
+  + getCorrections(): HeadCountCorrection[*]
+  + effectiveCount(): number
+  + crewPayment(): number
+  + correct(newCount: number, note: string, at: Date): HeadCountCorrection
+}
+
+class HeadCountCorrection {
+  - newCount: number
+  - note: string
+  - at: Date
+  + getNewCount(): number
+  + getNote(): string
+  + getAt(): Date
+}
+
+class WeightTally {
+  + {static} TOLERANCE_KG: number = 0.5
+  - agentKg: number [0..1]
+  - representativeKg: number [0..1]
+  + getAgentKg(): number [0..1]
+  + getRepresentativeKg(): number [0..1]
+  + enterAgentKg(kg: number): void
+  + enterRepresentativeKg(kg: number): void
+  + status(): CrossCheckStatus
+  + difference(): number [0..1]
+  + confirmedKg(): number
+  - {static} valid(kg: number): number
+}
+
+enum CrossCheckStatus <<enumeration>> {
+  PENDING
+  MATCH
+  MISMATCH
+}
+
+enum SessionKind <<enumeration>> {
+  THINNING
+  MAIN
+}
+
+class CrossCheckService {
+  - sessions: Repository<SlaughterSession>
+  - profit: BatchProfitService
+  - policy: AccessPolicy
+  + enterAgentKg(sessionId: string, kg: number, user: User): CrossCheckStatus
+  + enterRepresentativeKg(sessionId: string, kg: number, user: User): CrossCheckStatus
+  + status(sessionId: string): CrossCheckStatus
+  + recordSale(sessionId: string, buyer: Buyer, pricePerKg: number, user: User): Sale
+  + undoSale(sessionId: string, user: User): void
+  - unsold(sessionId: string): SlaughterSession
+  - session(sessionId: string): SlaughterSession
+}
+
+class Batch <<see 2.2a>>
+class Buyer <<see 2.2a>>
+interface "Repository<T>" as Repository <<interface>>
+hide Batch members
+hide Buyer members
+hide Repository members
+
+' ---------- Generalization
+FinancialEntry <|-- Expense
+FinancialEntry <|-- Sale
+
+' ---------- Composition (a head count and a weight tally mean nothing outside their session)
+SlaughterSession "1" *-- "0..1" HeadCountRecord : headCount
+SlaughterSession "1" *-- "1" WeightTally : tally
+HeadCountRecord "1" *-- "0..*" HeadCountCorrection : corrections
+
+' ---------- Association
+Sale "0..*" --> "1" Buyer : buyer
+FinancialEntry "0..*" --> "1" Batch : batchId
+SlaughterSession "0..*" --> "1" Batch : batchId
+SlaughterSession "0..1" --> "0..1" Sale : saleId
+CrossCheckService "1" --> "1" Repository : sessions
+
+' ---------- Dependency (used in a method: parameter, return value or local use)
+CrossCheckService ..> WeightTally : checks
+CrossCheckService ..> Buyer : recordSale(buyer)
+CrossCheckService ..> Sale : returns
+WeightTally ..> CrossCheckStatus
+SlaughterSession ..> SessionKind
+
+@enduml
