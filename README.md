@@ -24,7 +24,7 @@ Everything else (screens, design, what is simulated, demo data) is in [`prototyp
 | [`prototype/`](prototype) | High-fidelity prototype: source, tests, screenshots, video script |
 | `diagrams/` | UML class diagrams (architecture + detailed), PlantUML sources and PNG/SVG |
 | `low-fi/` | Low-fidelity prototype (draw.io) and its exports |
-| `report/` | The report and the script that builds it |
+| `report/build/` | The script that builds the Word report (the report itself is submitted separately) |
 
 ## AI use
 
